@@ -22,6 +22,7 @@ meta <- createMeta("Sen2LUI")
 # Compile dataset
 sen2_plots <- compileDataset()
 
+
 # Compile predictors
 meta$act_year = c("2018", "2019")
 meta$act_pred = c("NDVI", "NDII", "SATVI")
@@ -48,14 +49,11 @@ df_cmb <- lapply(ids, function(e){
 })
 names(df_cmb) <- ids
 
-meta$act_model <- c("2018_Hai", "2019_Hai", "2018_Sch", "2019_Sch")
+
+# Define model and training data
 meta$method <- "rf"
-
-
-Reduce(function(x, y) rbind(x, y), df[grep(e, names(df))])
-
-
-act_model_data <- rbind(df_cmb[[meta$act_model[1]]], df_cmb[[meta$act_model[2]]])
+meta$act_model <- c("2018_Hai", "2019_Hai", "2018_Sch", "2019_Sch")
+act_model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$act_model])
 act_model_data <- act_model_data[complete.cases(act_model_data), ]
 
 cl <- makeCluster(3)
@@ -77,20 +75,23 @@ stopCluster(cl)
 
 
 alb <- df_cmb$`2019_Alb`[complete.cases(df_cmb$`2019_Alb`),]
-names(alb) <- gsub("AEG", "HEG", names(hai))
+alb <- df_cmb$`2018_Alb`[complete.cases(df_cmb$`2018_Alb`),]
+alb <- rbind(df_cmb$`2018_Alb`[complete.cases(df_cmb$`2018_Alb`),], df_cmb$`2019_Alb`[complete.cases(df_cmb$`2019_Alb`),])
 p2018alb_ndvi <- predict(ffs_model, alb)
 plot(alb$LUI, p2018alb_ndvi)
 summary(lm(p2018alb_ndvi ~ alb$LUI))
 
 
 hai <- df_cmb$`2019_Hai`[complete.cases(df_cmb$`2019_Hai`),]
-names(hai) <- gsub("HEG", "AEG", names(hai))
 p2018hai_ndvi <- predict(ffs_model, hai)
 plot(hai$LUI, p2018hai_ndvi)
 summary(lm(p2018hai_ndvi ~ hai$LUI))
 
 sch <- df_cmb$`2018_Sch`[complete.cases(df_cmb$`2018_Sch`),]
-names(sch) <- gsub("Sch", "Alb", names(sch))
 p2018sch_ndvi <- predict(ffs_model, sch)
 plot(sch$LUI, p2018sch_ndvi)
 summary(lm(p2018sch_ndvi ~ sch$LUI))
+
+
+plot(act_model_data$LUI, ffs_model$finalModel$predicted)
+summary(lm(ffs_model$finalModel$predicted ~ act_model_data$LUI))
