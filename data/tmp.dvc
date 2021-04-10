@@ -1,0 +1,5 @@
+outs:
+- md5: 6d66d307ee4fca4d6718b31e0ae53fce.dir
+  size: 2517147
+  nfiles: 63
+  path: tmp
