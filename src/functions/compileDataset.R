@@ -87,6 +87,8 @@ compileDataset <- function() {
     ))
     lui$Year <- year
     names(lui)[which("EP.Plotid" == names(lui))] <- "plotID"
+    lui$Explo <- substr(lui$plotID, 1, 3)
+    lui$Explo_Year <- paste(lui$Explo, lui$Year, sep = "_")
     act_plots_mean <- merge(lui[, -1], act_plots_mean, by = "plotID")
 
     act_plots_mean$plotID[which(nchar(act_plots_mean$plotID) == 4)] <-
@@ -99,8 +101,9 @@ compileDataset <- function() {
   names(sen2_plots_mean) <- paste0(names(sen2_pixels), "_mean")
 
 
-  # Compute sd over plot for NDVI
-  sen2_plots_sd <- lapply(grep("NDVI", names(sen2_pixels)), function(i) {
+  # Compute sd over plot for indices
+  index_pos <- grep(pattern = c("NDVI|NDII|SATVI|REIP"), names(sen2_pixels))
+  sen2_plots_sd <- lapply(index_pos, function(i) {
     year <- substr(names(sen2_pixels)[i], 1, 4)
 
     f <- sen2_pixels[[i]]
@@ -121,6 +124,8 @@ compileDataset <- function() {
     ))
     lui$Year <- year
     names(lui)[which("EP.Plotid" == names(lui))] <- "plotID"
+    lui$Explo <- substr(lui$plotID, 1, 3)
+    lui$Explo_Year <- paste(lui$Explo, lui$Year, sep = "_")
     act_plots_sd <- merge(lui[, -1], act_plots_sd, by = "plotID")
 
     act_plots_sd$plotID[which(nchar(act_plots_sd$plotID) == 4)] <-
@@ -130,7 +135,7 @@ compileDataset <- function() {
 
     return(act_plots_sd)
   })
-  names(sen2_plots_sd) <- paste0(names(sen2_pixels[grep("NDVI", names(sen2_pixels))]), "_sd")
+  names(sen2_plots_sd) <- paste0(names(sen2_pixels[index_pos]), "_sd")
 
   sen2_plots <- c(sen2_plots_mean, sen2_plots_sd)
 

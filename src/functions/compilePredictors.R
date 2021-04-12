@@ -7,6 +7,8 @@
 #' @param info_year Metadata providing the year of the observation
 #' @param jd_start Start day of the compiled continous time series (not the starting day of the observations)
 #' @param jd_end End day of the compiled continous time series (not the last day of the observations)
+#' @param png_prefix Prefix of png graphics to be saved. The pngs are not required and have just an informative purpose.
+#' If NULL, no pngs are saved.
 #'
 #' @return
 #'
@@ -19,7 +21,7 @@
 #'
 #' }
 #'
-estimateTemporalSignal <- function(data, info_year, jd_start = 90, jd_end = 300, save_png = FALSE) {
+compilePredictors <- function(data, info_year, jd_start = 90, jd_end = 300, png_prefix = NULL) {
   jds <- seq(jd_start, jd_end)
 
   tp_data <- lapply(seq(nrow(data)), function(p) {
@@ -28,6 +30,7 @@ estimateTemporalSignal <- function(data, info_year, jd_start = 90, jd_end = 300,
       d = as.numeric(sub("JD", "", colnames(data)[col_ids])),
       v = as.numeric(data[p, col_ids])
     )
+    return_list <- list(tp_detail = NULL, tp_info = NULL, gm_model = NULL)
 
     # ggplot(data = act_df, aes(x = d, y = v)) + geom_point() + geom_smooth(method = "gam")
 
@@ -53,11 +56,12 @@ estimateTemporalSignal <- function(data, info_year, jd_start = 90, jd_end = 300,
           tp_proba = tp$proba,
           tp_info = tp$info
         )
-
         tp_info <- data.frame(
           plotID = data$plotID[p],
           LUI = data$LUI[p],
           Year = info_year,
+          Explo = data$Explo[p],
+          Explo_Year = data$Explo_Year[p],
           gam_q000_val = quantile(gm_pred, probs = 0),
           gam_q025_val = quantile(gm_pred, probs = 0.25),
           gam_q050_val = quantile(gm_pred, probs = 0.50),
@@ -78,24 +82,21 @@ estimateTemporalSignal <- function(data, info_year, jd_start = 90, jd_end = 300,
           tp_mean_min_values = ifelse(sum(tp$pits) == 0, -1, mean(tp_detail$tp_values[tp_detail$tp_type == "pit"])),
           tp_sd_min_values = ifelse(sum(tp$pits) > 1, sd(tp_detail$tp_values[tp_detail$tp_type == "pit"]), 0)
         )
-      }
 
-      if (save_png) {
-        png(file = file.path("data/tmp/", paste0(p, ".png")), width = 600, height = 350)
-        plot(jds, gm_pred, main = data$plotID[p])
-        points(jds[tp$tppos], ts_y[tp$tppos], col = "red")
-        points(act_df$d, act_df$v, col = "blue")
-        dev.off()
+        return_list <- list(tp_detail = tp_detail, tp_info = tp_info, gm_model = gm)
+
+        if (!is.null(png_prefix)) {
+          png(file = file.path("data/results/pngs/", paste0(png_prefix, "_", p, ".png")), width = 600, height = 350)
+          plot(jds, gm_pred, main = data$plotID[p])
+          points(jds[tp$tppos], ts_y[tp$tppos], col = "red")
+          points(act_df$d, act_df$v, col = "blue")
+          dev.off()
+        }
       }
     } else {
       print(paste0("Excluding ", data[p, "plotID"]))
-      tp_detail <- NULL
-      tp_info <- NULL
-      gm <- NULL
     }
-
-
-    return(list(tp_detail = tp_detail, tp_info = tp_info, gm_model = gm))
+    return(return_list)
   })
   names(tp_data) <- data$plotID
 
