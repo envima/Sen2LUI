@@ -58,7 +58,7 @@ names(df_cmb) <- pvid
 
 
 ### Define model and training data
-meta$method <- "cubist"
+meta$method <- "rf"
 meta$act_model <- c("2018_Alb", "2019_Alb", "2018_Hai", "2019_Hai", "2018_Sch", "2019_Sch")
 model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$act_model])
 model_data <- model_data[complete.cases(model_data), ]
@@ -69,14 +69,19 @@ cl <- makeCluster(3)
 registerDoParallel(cl)
 
 set.seed(11081974)
-folds <- CreateSpacetimeFolds(model_data, spacevar = "Explo_Year", k = 10)
+space_var <- "Explo_Year"
+folds <- CreateSpacetimeFolds(model_data, spacevar = space_var, k = 10)
+meta$spacefolds <- unlist(lapply(folds$indexOut, function(f){
+  unique(model_data[f, space_var])
+}))
+meta$model_rows
 
 set.seed(11081974)
 ffs_model <- ffs(model_data[, -meta_cols],
   model_data$LUI,
   method = meta$method,
   metric = "RMSE",
-  trControl = trainControl(method = "cv", number  = 10, index = folds$index)
+  trControl = trainControl(method = "cv", index = folds$index)
 )
 
 meta$model <- paste0("model_", paste(meta$act_model, collapse = "_"), "_", meta$method, ".rds")

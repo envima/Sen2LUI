@@ -1,0 +1,56 @@
+---
+title: "Zwischenergebnis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(envimaR)
+if (Sys.info()[["nodename"]] == "MyComputer") {
+  root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
+} else {
+  root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
+}
+source(file.path(root_folder, "src/functions/000_setup.R"))
+```
+
+## Ansatz
+
+Ich nutze momentan nur vier Indizes. Zuerst werden Zeitreihen mit der Auflösung von 1 Tag mit gam vorhergesagt, dann 
+Wendepunkte, Mittelwerte etc. aus den GAM-Ergebnissen berechnet. Das sind dann die eigentlichen Prädiktoren.
+
+Hier ein Beispiel so einer GAM-Vorhersage:
+
+
+```{r, echo = FALSE}
+knitr::include_graphics(file.path(root_folder, "data/results/pngs/2018_Alb_NDII_mean_1.png"))
+```
+
+
+## Modellergebnisse
+
+Räumliche Kreuzvalidierung, wobei immer ein "Exploratorienjahr" (z.B. Alb 2018 oder Hai 2019) rausgelassen werden. Auf
+allen anderen wird trainiert. In der Tabelle unten ist jeweils das herausgelassene Exploratorienjahr (=Testsample) 
+angegeben.
+
+Insgesamt drei Modell: cubist, nnet (funktioniet nicht gut), rf.
+
+```{r, echo = FALSE}
+mdl_fls <- list.files(file.path(root_folder, "data/results/models"), full.names = TRUE, pattern = glob2rx("*.rds"))
+
+mdls <- lapply(mdl_fls, function(f){
+  enviLoad(f)
+})
+
+for(i in seq(length(mdls))){
+print(mdls[[i]]$meta$method)
+print(mdls[[i]]$meta$act_model)
+print(cbind(mdls[[i]]$dat$resample[order(mdls[[i]]$dat$resample$Resample),], mdls[[i]]$meta$spacefolds))
+print(varImp(mdls[[i]]$dat))
+print("\n\n")
+}
+
+
+```
+
