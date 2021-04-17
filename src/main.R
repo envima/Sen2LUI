@@ -10,7 +10,7 @@ library(envimaR)
 if (Sys.info()[["nodename"]] == "MyComputer") {
   root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
 } else {
-  root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
+  root_folder <- "/mnt/sd19006/tnauss/Sen2LUI"
 }
 source(file.path(root_folder, "src/functions/000_setup.R"))
 
@@ -100,7 +100,7 @@ gc()
 
 
 ### Train model(s)
-cl <- makeCluster(3)
+cl <- makeCluster(39)
 registerDoParallel(cl)
 
 for (sv in space_var) {
