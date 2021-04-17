@@ -45,7 +45,7 @@ if (compute) {
 
 ### Compile predictors
 # Compile predictor dataset containing actual variables and additional information
-meta$cols_meta <- c(seq(1, grep("JD", names(sen2_plots[[1]][[1]]))[1] - 1))
+meta$cols_meta <- c(seq(1, grep("JD", names(sen2_plots[[1]][[1]][[1]]))[1] - 1))
 meta$pid <- apply(expand.grid(meta$years, meta$explos, meta$predictors, c("mean", "sd")), 1, paste, collapse = "_")
 if (compute) {
   psets <- lapply(meta$pid, function(d) {
