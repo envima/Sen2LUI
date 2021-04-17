@@ -17,7 +17,7 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 
 
 ### Define settings
-compute <- TRUE
+compute <- FALSE
 meta <- createMeta("Sen2LUI")
 meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")
@@ -29,8 +29,7 @@ meta$model_dataset <- c(
   "2017_Sch", "2018_Sch", "2019_Sch"
 )
 meta$method <- "cubist"
-# space_var <- c("Explo_Year", "Year", "Explo")
-space_var <- c("Explo_Year")
+space_var <- c("Explo_Year", "Year", "Explo")
 
 
 
@@ -90,7 +89,8 @@ model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$model_dataset])
 model_data <- model_data[complete.cases(model_data), ]
 # model_data <- model_data[, -grep("jd", names(model_data))]
 meta$model_rows <- nrow(model_data)
-meta$predictor_group_final <- names(model_data[, -meta$cols_meta])
+meta$correlated_predictors <- findCorrelation(model_data[, -meta$cols_meta], cutoff = 0.99, names = TRUE, exact = FALSE)
+meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% meta$correlated_predictors]
 
 
 ### Save metadata and free memory
