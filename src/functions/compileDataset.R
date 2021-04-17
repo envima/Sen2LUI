@@ -17,17 +17,17 @@
 #'
 #' }
 #'
-compileDataset <- function(compile_sd = NULL) {
-  sen2_pixels_files <- list.files("data/raw_data/sen2_pixels/")
-  sen2_plotID_pixels_files <- list.files("data/raw_data/sen2_plotID_pixels/")
-  lui_files <- list.files("data/raw_data/lui/")
+compileDataset <- function(root_folder, compile_sd = NULL) {
+  sen2_pixels_files <- list.files(file.path(root_folder, "data/raw_data/sen2_pixels/"))
+  sen2_plotID_pixels_files <- list.files(file.path(root_folder, "data/raw_data/sen2_plotID_pixels/"))
+  lui_files <- list.files(file.path(root_folder, "data/raw_data/lui/"))
 
   # Load individual pixel values of all plots.
   sen2_pixels <- lapply(sen2_pixels_files, function(f) {
     act_explo <- substr(f, 1, 8)
-    act_pixels <- read.csv(file.path("data/raw_data/sen2_pixels/", f))
+    act_pixels <- read.csv(file.path(root_folder, "data/raw_data/sen2_pixels/", f))
     act_plotID_pixels <- read.csv(file.path(
-      "data/raw_data/sen2_plotID_pixels/",
+      root_folder, "data/raw_data/sen2_plotID_pixels/",
       sen2_plotID_pixels_files[grep(act_explo, sen2_plotID_pixels_files)]
     ))
     act_pixels <- act_pixels[, -1]
@@ -100,7 +100,7 @@ compileDataset <- function(compile_sd = NULL) {
     names(act_plots_mean) <- str_replace(names(act_plots_mean), "X", "JD")
 
     lui <- read.csv(file.path(
-      "data/raw_data/LUI/",
+      root_folder, "data/raw_data/LUI/",
       lui_files[grep(
         paste0(year, "_", substr(act_plots_mean$plotID[1], 1, 1)),
         lui_files
@@ -137,7 +137,7 @@ compileDataset <- function(compile_sd = NULL) {
     names(act_plots_sd) <- str_replace(names(act_plots_sd), "X", "JD")
 
     lui <- read.csv(file.path(
-      "data/raw_data/LUI/",
+      root_folder, "data/raw_data/LUI/",
       lui_files[grep(
         paste0(year, "_", substr(act_plots_sd$plotID[1], 1, 1)),
         lui_files

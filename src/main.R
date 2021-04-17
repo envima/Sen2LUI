@@ -7,7 +7,7 @@
 
 ### Set evnironment
 library(envimaR)
-if (Sys.info()[["nodename"]] == "MyComputer") {
+if (Sys.info()[["nodename"]] == "PC19616") {
   root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
 } else {
   root_folder <- "/mnt/sd19006/tnauss/Sen2LUI"
@@ -35,10 +35,10 @@ space_var <- c("Explo_Year", "Year", "Explo")
 
 ### Compile dataset
 if (compute) {
-  sen2_plots <- compileDataset(compile_sd = meta$predictors)
-  enviSave(sen2_plots, file.path("data/compiled_data/", "sen2_plots.rds"), meta = meta)
+  sen2_plots <- compileDataset(root_folder = root_folder, compile_sd = meta$predictors)
+  enviSave(sen2_plots, file.path(root_folder, "data/compiled_data/", "sen2_plots.rds"), meta = meta)
 } else {
-  sen2_plots <- enviLoad(file.path("data/compiled_data/", "sen2_plots.rds"))
+  sen2_plots <- enviLoad(file.path(root_folder, "data/compiled_data/", "sen2_plots.rds"))
 }
 
 
@@ -52,7 +52,8 @@ if (compute) {
     print(paste0("Compiling predicor set: ", d))
     act <- compilePredictors(
       data = sen2_plots[[grep(substr(d, 1, 4), names(sen2_plots))]][[d]],
-      info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], png_prefix = d
+      info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], root_folder = root_folder,
+      png_prefix = d
     )
     if (!is.null(act$tp_info)) {
       names(act$tp_info)[-meta$cols_meta] <- paste(substr(d, (str_locate_all(pattern = "_", d)[[1]][2, 1] + 1),
@@ -62,9 +63,9 @@ if (compute) {
     return(act)
   })
   names(psets) <- meta$pid
-  enviSave(psets, file.path("data/compiled_data/", "psets.rds"), meta = meta)
+  enviSave(psets, file.path(root_folder, "data/compiled_data/", "psets.rds"), meta = meta)
 } else {
-  psets <- enviLoad(file.path("data/compiled_data/", "psets.rds"))
+  psets <- enviLoad(file.path(root_folder, "data/compiled_data/", "psets.rds"))
 }
 
 # Extract actual predictor variables from the overall predictor dataset.
@@ -77,9 +78,9 @@ if (compute) {
     Reduce(function(x, y) merge(x, y, all = TRUE), df[grep(e, names(df))])
   })
   names(df_cmb) <- meta$pvid
-  enviSave(df_cmb, file.path("data/compiled_data/", "df_cmb.rds"), meta = meta)
+  enviSave(df_cmb, file.path(root_folder, "data/compiled_data/", "df_cmb.rds"), meta = meta)
 } else {
-  df_cmb <- enviLoad(file.path("data/compiled_data/", "df_cmb.rds"))
+  df_cmb <- enviLoad(file.path(root_folder, "data/compiled_data/", "df_cmb.rds"))
 }
 
 
@@ -123,7 +124,7 @@ for (sv in space_var) {
     "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
     paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
   )
-  enviSave(ffs_model, file = file.path("data/results/models/", meta$model), meta)
+  enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
 }
 
 stopCluster(cl)

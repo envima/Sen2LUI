@@ -21,7 +21,7 @@
 #'
 #' }
 #'
-compilePredictors <- function(data, info_year, jd_start = 90, jd_end = 300, png_prefix = NULL) {
+compilePredictors <- function(data, info_year, jd_start = 90, jd_end = 300, root_folder = NULL, png_prefix = NULL) {
   jds <- seq(jd_start, jd_end)
 
   tp_data <- lapply(seq(nrow(data)), function(p) {
@@ -87,7 +87,8 @@ compilePredictors <- function(data, info_year, jd_start = 90, jd_end = 300, png_
         return_list <- list(tp_detail = tp_detail, tp_info = tp_info, gm_model = gm)
 
         if (!is.null(png_prefix)) {
-          png(file = file.path("data/results/pngs/", paste0(png_prefix, "_", p, ".png")), width = 600, height = 350)
+          png(file = file.path(root_folder, "data/results/pngs/", paste0(png_prefix, "_", p, ".png")),
+              width = 600, height = 350)
           plot(jds, gm_pred, main = data$plotID[p])
           points(jds[tp$tppos], ts_y[tp$tppos], col = "red")
           points(act_df$d, act_df$v, col = "blue")
