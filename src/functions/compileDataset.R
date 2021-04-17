@@ -17,17 +17,17 @@
 #'
 #' }
 #'
-compileDataset <- function() {
-  sen2_pixel_files <- list.files("data/source/tabs_bands_pixelwise_pure/")
-  sen2_plotID_pixels_files <- list.files("data/source/plot_id_pixelwise/")
-  lui_files <- list.files("data/source/LUI/")
+compileDataset <- function(compile_sd = NULL) {
+  sen2_pixels_files <- list.files("data/raw_data/sen2_pixels/")
+  sen2_plotID_pixels_files <- list.files("data/raw_data/sen2_plotID_pixels/")
+  lui_files <- list.files("data/raw_data/lui/")
 
   # Load individual pixel values of all plots.
-  sen2_pixels <- lapply(sen2_pixel_files, function(f) {
+  sen2_pixels <- lapply(sen2_pixels_files, function(f) {
     act_explo <- substr(f, 1, 8)
-    act_pixels <- read.csv(file.path("data/source/tabs_bands_pixelwise_pure/", f))
+    act_pixels <- read.csv(file.path("data/raw_data/sen2_pixels/", f))
     act_plotID_pixels <- read.csv(file.path(
-      "data/source/plot_id_pixelwise/",
+      "data/raw_data/sen2_plotID_pixels/",
       sen2_plotID_pixels_files[grep(act_explo, sen2_plotID_pixels_files)]
     ))
     act_pixels <- act_pixels[, -1]
@@ -36,26 +36,48 @@ compileDataset <- function() {
 
     return(act_data)
   })
-  names(sen2_pixels) <- substr(sen2_pixel_files, 1, (nchar(sen2_pixel_files)) - 4)
+  names(sen2_pixels) <- substr(sen2_pixels_files, 1, (nchar(sen2_pixels_files)) - 4)
 
 
   # Compute some more indices
-  years <- c("2018", "2019")
-  explos <- c("Alb", "Hai", "Sch")
+  years <- unique(substr(names(sen2_pixels), 1, 4))
+  explos <- unique(substr(names(sen2_pixels), 6, 8))
   years_explos <- apply(expand.grid(years, explos), 1, paste, collapse = "_")
 
-  for(p in years_explos){
+  for (p in years_explos) {
 
+    # Disease water stress index
+    DSWI <- (sen2_pixels[[paste0(p, "_B8")]][, -1] + sen2_pixels[[paste0(p, "_B3")]][, -1]) /
+      (sen2_pixels[[paste0(p, "_B11")]][, -1] + sen2_pixels[[paste0(p, "_B4")]][, -1])
+    DSWI <- cbind(sen2_pixels[[paste0(p, "_B8")]]$plotID_pixels, DSWI)
+    names(DSWI)[1] <- "plotID_pixels"
+    sen2_pixels <- c(sen2_pixels, list(DSWI = DSWI))
+    names(sen2_pixels)[length(sen2_pixels)] <- paste0(p, "_DSWI")
+
+    # Modified Chlorophyll Absorption Ratio
+    MCARI <- (((sen2_pixels[[paste0(p, "_B5")]][, -1] - sen2_pixels[[paste0(p, "_B4")]][, -1]) -
+                 0.2 * (sen2_pixels[[paste0(p, "_B5")]][, -1] - sen2_pixels[[paste0(p, "_B3")]][, -1])) *
+                (sen2_pixels[[paste0(p, "_B5")]][, -1] / sen2_pixels[[paste0(p, "_B4")]][, -1])) /
+      (1.5 * (1.2 * (sen2_pixels[[paste0(p, "_B8")]][, -1] - sen2_pixels[[paste0(p, "_B3")]][, -1]) -
+                2.5 * (sen2_pixels[[paste0(p, "_B4")]][, -1] - sen2_pixels[[paste0(p, "_B3")]][, -1])) /
+         ((2 * sen2_pixels[[paste0(p, "_B8")]][, -1] + 1)**2 -
+            (6 * sen2_pixels[[paste0(p, "_B8")]][, -1]) - 5 * (sen2_pixels[[paste0(p, "_B4")]][, -1])**0.5 - 0.5)**0.5)
+    MCARI <- cbind(sen2_pixels[[paste0(p, "_B5")]]$plotID_pixels, MCARI)
+    names(MCARI)[1] <- "plotID_pixels"
+    sen2_pixels <- c(sen2_pixels, list(MCARI = MCARI))
+    names(sen2_pixels)[length(sen2_pixels)] <- paste0(p, "_MCARI")
+
+    # Normalized Difference Infrared Index
     NDII <- (sen2_pixels[[paste0(p, "_B8")]][, -1] - sen2_pixels[[paste0(p, "_B11")]][, -1]) /
       (sen2_pixels[[paste0(p, "_B8")]][, -1] + sen2_pixels[[paste0(p, "_B11")]][, -1])
-    NDII <- cbind(sen2_pixels[[paste0(p, "_B11")]]$plotID_pixels, NDII)
+    NDII <- cbind(sen2_pixels[[paste0(p, "_B8")]]$plotID_pixels, NDII)
     names(NDII)[1] <- "plotID_pixels"
-
     sen2_pixels <- c(sen2_pixels, list(NDII = NDII))
     names(sen2_pixels)[length(sen2_pixels)] <- paste0(p, "_NDII")
 
+    # Soil Adjusted Total Vegetation Index
     SATVI <- ((sen2_pixels[[paste0(p, "_B11")]][, -1] - sen2_pixels[[paste0(p, "_B4")]][, -1]) /
-                (sen2_pixels[[paste0(p, "_B11")]][, -1] + sen2_pixels[[paste0(p, "_B4")]][, -1] + 0.5)) *
+      (sen2_pixels[[paste0(p, "_B11")]][, -1] + sen2_pixels[[paste0(p, "_B4")]][, -1] + 0.5)) *
       (1 + 0.5) - (sen2_pixels[[paste0(p, "_B12")]][, -1] / 2)
     SATVI <- cbind(sen2_pixels[[paste0(p, "_B11")]]$plotID_pixels, SATVI)
     names(SATVI)[1] <- "plotID_pixels"
@@ -66,7 +88,6 @@ compileDataset <- function() {
 
   # Compute mean over plot for all bands/indices
   sen2_plots_mean <- lapply(seq(length(sen2_pixels)), function(i) {
-
     year <- substr(names(sen2_pixels)[i], 1, 4)
 
     f <- sen2_pixels[[i]]
@@ -79,7 +100,7 @@ compileDataset <- function() {
     names(act_plots_mean) <- str_replace(names(act_plots_mean), "X", "JD")
 
     lui <- read.csv(file.path(
-      "data/source/LUI/",
+      "data/raw_data/LUI/",
       lui_files[grep(
         paste0(year, "_", substr(act_plots_mean$plotID[1], 1, 1)),
         lui_files
@@ -102,7 +123,7 @@ compileDataset <- function() {
 
 
   # Compute sd over plot for indices
-  index_pos <- grep(pattern = c("NDVI|NDII|SATVI|REIP"), names(sen2_pixels))
+  index_pos <- grep(pattern = paste(compile_sd, collapse = "|"), names(sen2_pixels))
   sen2_plots_sd <- lapply(index_pos, function(i) {
     year <- substr(names(sen2_pixels)[i], 1, 4)
 
@@ -116,7 +137,7 @@ compileDataset <- function() {
     names(act_plots_sd) <- str_replace(names(act_plots_sd), "X", "JD")
 
     lui <- read.csv(file.path(
-      "data/source/LUI/",
+      "data/raw_data/LUI/",
       lui_files[grep(
         paste0(year, "_", substr(act_plots_sd$plotID[1], 1, 1)),
         lui_files
@@ -139,14 +160,10 @@ compileDataset <- function() {
 
   sen2_plots <- c(sen2_plots_mean, sen2_plots_sd)
 
-  sen2_plots <- list(
-    obs2018 = sen2_plots[grep("2018", names(sen2_plots))],
-    obs2019 = sen2_plots[grep("2019", names(sen2_plots))]
-  )
-
-  saveRDS(sen2_plots, "data/source/Sen2/sen2_plots.R")
+  sen2_plots <- lapply(years, function(y){
+    sen2_plots[grep(y, names(sen2_plots))]
+  })
+  names(sen2_plots) <- paste0("obs", years)
 
   return(sen2_plots)
 }
-
-

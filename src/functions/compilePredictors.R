@@ -69,6 +69,7 @@ compilePredictors <- function(data, info_year, jd_start = 90, jd_end = 300, png_
           gam_q100_val = quantile(gm_pred, probs = 1),
           gam_mean_val = mean(gm_pred),
           gam_sd_val = sd(gm_pred),
+          gam_auc = sum(diff(jds) * (head(gm_pred,-1) + tail(gm_pred,-1)))/2,
           tp_turns = tp$nturns,
           tp_peaks = sum(tp$peaks),
           tp_pits = sum(tp$pits),
