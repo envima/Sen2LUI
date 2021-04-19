@@ -68,6 +68,23 @@ if (compute) {
   psets <- enviLoad(file.path(root_folder, "data/compiled_data/", "psets.rds"))$dat
 }
 
+# Collect some meta information
+tmp <- lapply(psets, "[[", 2)
+smoothing <- lapply(seq(length(tmp)), function(i){
+  p <- compact(tmp[[i]])
+  if(!is_empty(p)){
+    smoothing <- lapply(seq(length(p)), function(j){
+      data.frame(predictor = paste(names(tmp[i]), names(p[j]), sep = "_"),
+                 gam_smooth_term = unique(p[[j]]$tp_smooth_term))
+    })
+    return(do.call("rbind", smoothing))
+  }
+  return(smoothing)
+})
+meta$smoothing <- do.call("rbind", smoothing)
+
+
+
 # Extract actual predictor variables from the overall predictor dataset.
 if (compute) {
   df <- lapply(psets, "[[", 1)
@@ -134,4 +151,5 @@ for(id in meta$predictors){
   print(id)
   print(nrow(a[, c(1:5, grep(id, colnames(a)))][complete.cases(a[, c(1:5, grep(id, colnames(a)))]),]))
 }
+
 

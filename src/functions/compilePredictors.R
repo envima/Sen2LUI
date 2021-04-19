@@ -67,7 +67,7 @@ compilePredictors <- function(data, info_year, jd_start = 90, jd_end = 300, root
           tp_values = gm_pred[tp$tppos],
           tp_type = rep(typep, length.out = tp$nturns),
           tp_proba = tp$proba,
-          tp_info = tp$info
+          tp_info = tp$info,
           tp_smooth_term = smooth_term
         )
         tp_info <- data.frame(
