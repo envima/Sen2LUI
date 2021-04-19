@@ -73,6 +73,7 @@ if (compute) {
 # Collect some meta information
 tmp <- lapply(psets, "[[", 2)
 smoothing <- lapply(seq(length(tmp)), function(i) {
+  smoothing <- NULL
   p <- compact(tmp[[i]])
   if (!is_empty(p)) {
     smoothing <- lapply(seq(length(p)), function(j) {
