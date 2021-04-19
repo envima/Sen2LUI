@@ -38,14 +38,14 @@ if (compute) {
   sen2_plots <- compileDataset(root_folder = root_folder, compile_sd = meta$predictors)
   enviSave(sen2_plots, file.path(root_folder, "data/compiled_data/", "sen2_plots.rds"), meta = meta)
 } else {
-  sen2_plots <- enviLoad(file.path(root_folder, "data/compiled_data/", "sen2_plots.rds"))
+  sen2_plots <- enviLoad(file.path(root_folder, "data/compiled_data/", "sen2_plots.rds"))$dat
 }
 
 
 
 ### Compile predictors
 # Compile predictor dataset containing actual variables and additional information
-meta$cols_meta <- c(seq(1, grep("JD", names(sen2_plots[[1]][[1]][[1]]))[1] - 1))
+meta$cols_meta <- c(seq(1, grep("JD", names(sen2_plots[[1]][[1]]))[1] - 1))
 meta$pid <- apply(expand.grid(meta$years, meta$explos, meta$predictors, c("mean", "sd")), 1, paste, collapse = "_")
 if (compute) {
   psets <- lapply(meta$pid, function(d) {
@@ -65,7 +65,7 @@ if (compute) {
   names(psets) <- meta$pid
   enviSave(psets, file.path(root_folder, "data/compiled_data/", "psets.rds"), meta = meta)
 } else {
-  psets <- enviLoad(file.path(root_folder, "data/compiled_data/", "psets.rds"))
+  psets <- enviLoad(file.path(root_folder, "data/compiled_data/", "psets.rds"))$dat
 }
 
 # Extract actual predictor variables from the overall predictor dataset.
@@ -80,7 +80,7 @@ if (compute) {
   names(df_cmb) <- meta$pvid
   enviSave(df_cmb, file.path(root_folder, "data/compiled_data/", "df_cmb.rds"), meta = meta)
 } else {
-  df_cmb <- enviLoad(file.path(root_folder, "data/compiled_data/", "df_cmb.rds"))
+  df_cmb <- enviLoad(file.path(root_folder, "data/compiled_data/", "df_cmb.rds"))$dat
 }
 
 
@@ -128,3 +128,10 @@ for (sv in space_var) {
 }
 
 stopCluster(cl)
+
+
+for(id in meta$predictors){
+  print(id)
+  print(nrow(a[, c(1:5, grep(id, colnames(a)))][complete.cases(a[, c(1:5, grep(id, colnames(a)))]),]))
+}
+

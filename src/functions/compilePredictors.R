@@ -42,6 +42,16 @@ compilePredictors <- function(data, info_year, jd_start = 90, jd_end = 300, root
       ts_y <- ts(as.numeric(gm_pred), start = jd_start, end = jd_end)
       tp <- turnpoints(ts_y)
 
+      # If standard smooth term approach leads to 0 turning points, use cyclic cubic regression splines instead to
+      # get a fit which is not linear.
+      if(tp$nturns == 0){
+        set.seed(11081974)
+        gm <- gam(v ~ s(d, k = -1, bs = "cc"), data = act_df)
+        gm_pred <- predict(gm, data.frame(d = jds))
+        ts_y <- ts(as.numeric(gm_pred), start = jd_start, end = jd_end)
+        tp <- turnpoints(ts_y)
+      }
+
       if (tp$firstispeak == FALSE | is.na(tp$firstispeak)) {
         typep <- c("pit", "peak")
       } else {
