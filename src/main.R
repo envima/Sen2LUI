@@ -45,7 +45,8 @@ if (compute) {
 
 ### Compile predictors
 # Compile predictor dataset containing actual variables and additional information
-meta$cols_meta <- c(seq(1, grep("JD", names(sen2_plots[[1]][[1]]))[1] - 1))
+cols_meta <- c(seq(1, grep("JD", names(sen2_plots[[1]][[1]]))[1] - 1))
+meta$cols_meta <- names(sen2_plots[[1]][[1]])[cols_meta]
 meta$pid <- apply(expand.grid(meta$years, meta$explos, meta$predictors, c("mean", "sd")), 1, paste, collapse = "_")
 if (compute) {
   psets <- lapply(meta$pid, function(d) {
@@ -56,9 +57,10 @@ if (compute) {
       png_prefix = d
     )
     if (!is.null(act$tp_info)) {
-      names(act$tp_info)[-meta$cols_meta] <- paste(substr(d, (str_locate_all(pattern = "_", d)[[1]][2, 1] + 1),
-                                                          nchar(d)), names(act$tp_info)[-meta$cols_meta], sep = "_"
-      )
+      names(act$tp_info)[-cols_meta] <- paste(substr(
+        d, (str_locate_all(pattern = "_", d)[[1]][2, 1] + 1),
+        nchar(d)
+      ), names(act$tp_info)[-cols_meta], sep = "_")
     }
     return(act)
   })
@@ -70,12 +72,14 @@ if (compute) {
 
 # Collect some meta information
 tmp <- lapply(psets, "[[", 2)
-smoothing <- lapply(seq(length(tmp)), function(i){
+smoothing <- lapply(seq(length(tmp)), function(i) {
   p <- compact(tmp[[i]])
-  if(!is_empty(p)){
-    smoothing <- lapply(seq(length(p)), function(j){
-      data.frame(predictor = paste(names(tmp[i]), names(p[j]), sep = "_"),
-                 gam_smooth_term = unique(p[[j]]$tp_smooth_term))
+  if (!is_empty(p)) {
+    smoothing <- lapply(seq(length(p)), function(j) {
+      data.frame(
+        predictor = paste(names(tmp[i]), names(p[j]), sep = "_"),
+        gam_smooth_term = unique(p[[j]]$tp_smooth_term)
+      )
     })
     return(do.call("rbind", smoothing))
   }
@@ -107,8 +111,12 @@ model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$model_dataset])
 model_data <- model_data[complete.cases(model_data), ]
 # model_data <- model_data[, -grep("jd", names(model_data))]
 meta$model_rows <- nrow(model_data)
-meta$correlated_predictors <- findCorrelation(model_data[, -meta$cols_meta], cutoff = 0.99, names = TRUE, exact = FALSE)
-meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% meta$correlated_predictors]
+meta$correlated_predictors <- findCorrelation(model_data[, -which(names(model_data) %in% meta$cols_meta)],
+  cutoff = 0.99, names = TRUE, exact = FALSE
+)
+meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
+  c(meta$cols_meta, meta$correlated_predictors)]
+
 
 
 ### Save metadata and free memory
@@ -147,9 +155,7 @@ for (sv in space_var) {
 stopCluster(cl)
 
 
-for(id in meta$predictors){
+for (id in meta$predictors) {
   print(id)
-  print(nrow(a[, c(1:5, grep(id, colnames(a)))][complete.cases(a[, c(1:5, grep(id, colnames(a)))]),]))
+  print(nrow(a[, c(1:5, grep(id, colnames(a)))][complete.cases(a[, c(1:5, grep(id, colnames(a)))]), ]))
 }
-
-
