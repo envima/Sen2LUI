@@ -34,12 +34,16 @@ space_var <- c("Explo_Year", "Year", "Explo")
 
 
 ### Compile dataset
+# Sentinel 2
 if (compute) {
   sen2_plots <- compileDataset(root_folder = root_folder, compile_sd = meta$predictors)
   enviSave(sen2_plots, file.path(root_folder, "data/compiled_data/", "sen2_plots.rds"), meta = meta)
 } else {
   sen2_plots <- enviLoad(file.path(root_folder, "data/compiled_data/", "sen2_plots.rds"))$dat
 }
+
+# Climate stations
+met_plots <- compileMetDataset(root_folder, met_pars = c("Ta_200", "precipitation_radolan"), jd_range = c(90, 300))
 
 
 
@@ -157,15 +161,21 @@ for (sv in space_var) {
 stopCluster(cl)
 
 
-model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_20210419*.rds"),
+model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_202104*.rds"),
                           full.names = TRUE)
 models <- lapply(model_files, function(m){
-  enviLoad(m)$dat
+  enviLoad(m)
   })
 
 for(m in models){
-  print(m$resample)
+  print(data.frame(m$dat$resample[order(m$dat$resample$Resample),"Rsquared"], m$meta$spacefolds))
 }
 
 
+t <- enviLoad(model_files[3])
+t$meta
+t$dat$resample
 
+t1 <- enviLoad(model_files[6])
+t1$meta$spacefolds
+t1$dat$resample
