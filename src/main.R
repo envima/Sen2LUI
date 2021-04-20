@@ -112,11 +112,12 @@ model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$model_dataset])
 model_data <- model_data[complete.cases(model_data), ]
 # model_data <- model_data[, -grep("jd", names(model_data))]
 meta$model_rows <- nrow(model_data)
-meta$correlated_predictors <- findCorrelation(model_data[, -which(names(model_data) %in% meta$cols_meta)],
-  cutoff = 0.99, names = TRUE, exact = FALSE
-)
-meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
-  c(meta$cols_meta, meta$correlated_predictors)]
+# meta$correlated_predictors <- findCorrelation(model_data[, -which(names(model_data) %in% meta$cols_meta)],
+#   cutoff = 0.99, names = TRUE, exact = FALSE
+# )
+# meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
+  # c(meta$cols_meta, meta$correlated_predictors)]
+meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% meta$cols_meta]
 
 
 
@@ -156,7 +157,15 @@ for (sv in space_var) {
 stopCluster(cl)
 
 
-for (id in meta$predictors) {
-  print(id)
-  print(nrow(a[, c(1:5, grep(id, colnames(a)))][complete.cases(a[, c(1:5, grep(id, colnames(a)))]), ]))
+model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_20210419*.rds"),
+                          full.names = TRUE)
+models <- lapply(model_files, function(m){
+  enviLoad(m)$dat
+  })
+
+for(m in models){
+  print(m$resample)
 }
+
+
+
