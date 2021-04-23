@@ -23,6 +23,8 @@ meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")
 meta$jd_range <- c(90, 300)
 meta$predictors <- c("NDVI", "REIP", "DSWI", "MCARI", "NDII", "SATVI", "B12")
+meta$met_predictors <- c("Ta_200", "precipitation_radolan")
+meta$use_met_predictory <- TRUE
 meta$model_dataset <- c(
   "2017_Alb", "2018_Alb", "2019_Alb",
   "2017_Hai", "2018_Hai", "2019_Hai",
@@ -43,7 +45,12 @@ if (compute) {
 }
 
 # Climate stations
-met_plots <- compileMetDataset(root_folder, met_pars = c("Ta_200", "precipitation_radolan"), jd_range = c(90, 300))
+if (compute) {
+  met_plots <- compileMetDataset(root_folder, met_pars = meta$met_predictors, jd_range = c(90, 300))
+  enviSave(met_plots, file.path(root_folder, "data/compiled_data/", "met_plots.rds"), meta = meta)
+} else {
+  met_plots <- enviLoad(file.path(root_folder, "data/compiled_data/", "met_plots.rds"))$dat
+}
 
 
 
@@ -70,27 +77,34 @@ if (compute) {
   })
   names(psets) <- meta$pid
   enviSave(psets, file.path(root_folder, "data/compiled_data/", "psets.rds"), meta = meta)
+
+
+
+  meta$met_pid <- apply(expand.grid(meta$years, meta$explos, meta$met_predictors), 1, paste, collapse = "_")
+  msets <- lapply(meta$met_pid, function(d) {
+    print(paste0("Compiling predicor set: ", d))
+    act <- compilePredictors(
+      data = met_plots[[grep(substr(d, 1, 4), names(met_plots))]][[d]],
+      info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], root_folder = root_folder,
+      png_prefix = d
+    )
+    if (!is.null(act$tp_info)) {
+      names(act$tp_info)[-cols_meta] <- paste(substr(
+        d, (str_locate_all(pattern = "_", d)[[1]][2, 1] + 1),
+        nchar(d)
+      ), names(act$tp_info)[-cols_meta], sep = "_")
+    }
+    return(act)
+  })
+  names(msets) <- meta$met_pid
+  enviSave(msets, file.path(root_folder, "data/compiled_data/", "msets.rds"), meta = meta)
 } else {
-  psets <- enviLoad(file.path(root_folder, "data/compiled_data/", "psets.rds"))$dat
+  msets <- enviLoad(file.path(root_folder, "data/compiled_data/", "msets.rds"))$dat
 }
 
 # Collect some meta information
-tmp <- lapply(psets, "[[", 2)
-smoothing <- lapply(seq(length(tmp)), function(i) {
-  smoothing <- NULL
-  p <- compact(tmp[[i]])
-  if (!is_empty(p)) {
-    smoothing <- lapply(seq(length(p)), function(j) {
-      data.frame(
-        predictor = paste(names(tmp[i]), names(p[j]), sep = "_"),
-        gam_smooth_term = unique(p[[j]]$tp_smooth_term)
-      )
-    })
-    return(do.call("rbind", smoothing))
-  }
-  return(smoothing)
-})
-meta$smoothing <- do.call("rbind", smoothing)
+meta$smoothing <- collectMetaSmoothing(data = psets)
+meta$met_smoothing <- collectMetaSmoothing(data = msets)
 
 
 
@@ -99,17 +113,20 @@ if (compute) {
   df <- lapply(psets, "[[", 1)
   names(df) <- names(psets)
 
+  df_met <- lapply(msets, "[[", 1)
+  names(df_met) <- names(msets)
+
   meta$pvid <- apply(expand.grid(meta$years, meta$explos), 1, paste, collapse = "_")
   df_cmb <- lapply(meta$pvid, function(e) {
-    Reduce(function(x, y) merge(x, y, all = TRUE), df[grep(e, names(df))])
+    tmp <- Reduce(function(x, y) merge(x, y, all = TRUE), df[grep(e, names(df))])
+    tmp_met <- Reduce(function(x, y) merge(x, y, all = TRUE), df_met[grep(e, names(df_met))])
+    return(merge(tmp, tmp_met))
   })
   names(df_cmb) <- meta$pvid
   enviSave(df_cmb, file.path(root_folder, "data/compiled_data/", "df_cmb.rds"), meta = meta)
 } else {
   df_cmb <- enviLoad(file.path(root_folder, "data/compiled_data/", "df_cmb.rds"))$dat
 }
-
-
 
 ### Compile model dataset
 model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$model_dataset])
@@ -121,6 +138,9 @@ meta$model_rows <- nrow(model_data)
 # )
 # meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
   # c(meta$cols_meta, meta$correlated_predictors)]
+if(meta$use_met_predictory == FALSE){
+  meta$cols_meta <- c(meta$cols_meta, meta$met_predictors)
+}
 meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% meta$cols_meta]
 
 

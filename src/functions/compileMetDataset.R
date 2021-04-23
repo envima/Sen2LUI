@@ -20,6 +20,7 @@
 compileMetDataset <- function(root_folder, met_pars = c("Ta_200", "precipitation_radolan"), jd_range = c(90, 300)) {
 
   met_obs <- read.csv(file.path(root_folder, "data/raw_data/meteorological_variables/plots.csv"))
+  lui_files <- list.files(file.path(root_folder, "data/raw_data/lui/"))
   met_obs$datetime <- as.POSIXct(met_obs$datetime, tz = "UTC")
 
   years <- unique(met_obs$year)
@@ -44,6 +45,20 @@ compileMetDataset <- function(root_folder, met_pars = c("Ta_200", "precipitation
 
         names(tmp)[-1] <- paste0("JD", names(tmp)[-1])
 
+        lui <- read.csv(file.path(
+          root_folder, "data/raw_data/LUI/",
+          lui_files[grep(
+            paste0(y, "_", substr(tmp$plotID[1], 1, 1)),
+            lui_files
+          )]
+        ))
+        lui$Year <- y
+        names(lui)[which("EP.Plotid" == names(lui))] <- "plotID"
+        lui$Explo <- substr(lui$plotID, 1, 3)
+        lui$Explo_Year <- paste(lui$Explo, lui$Year, sep = "_")
+        tmp <- merge(lui[, -1], tmp, by = "plotID")
+        tmp <- tmp[order(tmp$plotID), ]
+
         return(tmp)
       })
       names(plots) <- met_pars
@@ -55,6 +70,9 @@ compileMetDataset <- function(root_folder, met_pars = c("Ta_200", "precipitation
   names(year_explo_pars) <- years
   year_explo_pars <- unlist(year_explo_pars, recursive = FALSE)
   names(year_explo_pars) <- gsub("[.]", "_", names(year_explo_pars))
+  names(year_explo_pars) <- gsub("AEG", "Alb", names(year_explo_pars))
+  names(year_explo_pars) <- gsub("HEG", "Hai", names(year_explo_pars))
+  names(year_explo_pars) <- gsub("SEG", "Sch", names(year_explo_pars))
 
   year_explo_pars <- lapply(years, function(y){
     year_explo_pars[grep(y, names(year_explo_pars))]
