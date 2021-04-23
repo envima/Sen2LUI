@@ -78,8 +78,6 @@ if (compute) {
   names(psets) <- meta$pid
   enviSave(psets, file.path(root_folder, "data/compiled_data/", "psets.rds"), meta = meta)
 
-
-
   meta$met_pid <- apply(expand.grid(meta$years, meta$explos, meta$met_predictors), 1, paste, collapse = "_")
   msets <- lapply(meta$met_pid, function(d) {
     print(paste0("Compiling predicor set: ", d))
@@ -99,6 +97,7 @@ if (compute) {
   names(msets) <- meta$met_pid
   enviSave(msets, file.path(root_folder, "data/compiled_data/", "msets.rds"), meta = meta)
 } else {
+  psets <- enviLoad(file.path(root_folder, "data/compiled_data/", "psets.rds"))$dat
   msets <- enviLoad(file.path(root_folder, "data/compiled_data/", "msets.rds"))$dat
 }
 
