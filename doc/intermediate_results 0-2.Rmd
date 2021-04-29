@@ -1,0 +1,46 @@
+---
+title: "Zwischenergebnis"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(envimaR)
+if (Sys.info()[["nodename"]] == "MyComputer") {
+  root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
+} else {
+  root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
+}
+source(file.path(root_folder, "src/functions/000_setup.R"))
+```
+
+
+## Modellergebnisse
+
+
+```{r, echo = FALSE}
+model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_202104*.rds"),
+                          full.names = TRUE)
+models <- lapply(model_files, function(m){
+  enviLoad(m)
+  })
+
+for(m in models){
+  print(data.frame(m$meta$predictors))
+  print(data.frame(m$dat$resample[order(m$dat$resample$Resample),"Rsquared"], m$meta$spacefolds))
+}
+
+
+
+for(i in seq(length(mdls))){
+print(mdls[[i]]$meta$method)
+print(mdls[[i]]$meta$act_model)
+print(cbind(mdls[[i]]$dat$resample[order(mdls[[i]]$dat$resample$Resample),], mdls[[i]]$meta$spacefolds))
+print(varImp(mdls[[i]]$dat))
+print("\n\n")
+}
+
+
+```
+

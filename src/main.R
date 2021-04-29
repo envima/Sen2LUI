@@ -17,7 +17,7 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 
 
 ### Define settings
-compute <- FALSE
+compute <- TRUE
 meta <- createMeta("Sen2LUI")
 meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")
@@ -150,51 +150,88 @@ gc()
 
 
 
+### Split data frame by exploratories
+model_data_explo <- lapply(unique(model_data$Explo), function(e){
+  model_data[model_data$Explo == e, ]
+})
+names(model_data_explo) <- unique(model_data$Explo)
+model_data_explo <- c(list(model_data), model_data_explo)
+names(model_data_explo)[1] <- "ALL"
+
+
+
 ### Train model(s)
 cl <- makeCluster(39)
 registerDoParallel(cl)
 
-for (sv in space_var) {
-  meta$space_var <- sv
-  set.seed(11081974)
-  folds <- CreateSpacetimeFolds(model_data, spacevar = meta$space_var, k = 10)
-  meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
-    unique(model_data[f, meta$space_var])
-  }))
+for(i in seq(length(model_data_explo))){
+  m = model_data_explo[[i]]
+  meta$model_run = names(model_data_explo)[i]
+  for (sv in space_var) {
+    meta$model_run =
+    meta$space_var <- sv
+    if(length(unique(m[, meta$space_var])) > 1){
+      print(meta$space_var)
+      set.seed(11081974)
+      folds <- CreateSpacetimeFolds(m, spacevar = meta$space_var, k = 10, seed = 11081974)
+      meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
+        unique(m[f, meta$space_var])
+      }))
 
-  set.seed(11081974)
-  ffs_model <- ffs(model_data[, meta$predictor_group_final],
-    model_data$LUI,
-    method = meta$method,
-    metric = "RMSE",
-    trControl = trainControl(method = "cv", index = folds$index)
-  )
-
-  meta$model <- paste0(
-    "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
-    paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
-  )
-  enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
+      set.seed(11081974)
+      # ffs_model <- ffs(m[, meta$predictor_group_final],
+      #                  m$LUI,
+      #                  method = meta$method,
+      #                  metric = "RMSE",
+      #                  seed = 11081974,
+      #                  withinSE = FALSE,
+      #                  trControl = trainControl(method = "cv", index = folds$index)
+      # )
+      #
+      # meta$model <- paste0(
+      #   "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
+      #   paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
+      # )
+      # enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
+    }
+  }
 }
 
 stopCluster(cl)
 
 
-model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_202104*.rds"),
-                          full.names = TRUE)
-models <- lapply(model_files, function(m){
-  enviLoad(m)
-  })
+# model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_202104*.rds"),
+#                           full.names = TRUE)
+# models <- lapply(model_files, function(m){
+#   enviLoad(m)
+#   })
+#
+#
+#
+#
+#
+#
+#
+# for(m in models){
+#   print(data.frame(m$meta$use_met_predictory))
+#     print(data.frame(m$meta$use_met_predictory))
+#     print(m$dat$selectedvars)
+#     print(data.frame(m$dat$resample[order(m$dat$resample$Resample),"Rsquared"], m$meta$spacefolds))
+#
+# }
+#
+#
+# for (sv in space_var) {
+#   meta$space_var <- sv
+#   meta$space_var <- space_var[[1]]
+#   if(length(unique(model_data_explo[[1]][, meta$space_var])) > 1){
+#     set.seed(11081974)
+#     folds <- CreateSpacetimeFolds(model_data_explo[[1]], spacevar = meta$space_var, k = 10, seed = 11081974)
+#     meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
+#       unique(model_data_explo[[1]][f, meta$space_var])
+#     }))
+#
+#   }
+#
+# }
 
-for(m in models){
-  print(data.frame(m$dat$resample[order(m$dat$resample$Resample),"Rsquared"], m$meta$spacefolds))
-}
-
-
-t <- enviLoad(model_files[3])
-t$meta
-t$dat$resample
-
-t1 <- enviLoad(model_files[6])
-t1$meta$spacefolds
-t1$dat$resample
