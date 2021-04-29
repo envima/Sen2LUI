@@ -17,14 +17,14 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 
 
 ### Define settings
-compute <- TRUE
+compute <- FALSE
 meta <- createMeta("Sen2LUI")
 meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")
 meta$jd_range <- c(90, 300)
 meta$predictors <- c("NDVI", "REIP", "DSWI", "MCARI", "NDII", "SATVI", "B12")
 meta$met_predictors <- c("Ta_200", "precipitation_radolan")
-meta$use_met_predictory <- TRUE
+meta$use_met_predictory <- FALSE
 meta$model_dataset <- c(
   "2017_Alb", "2018_Alb", "2019_Alb",
   "2017_Hai", "2018_Hai", "2019_Hai",
@@ -179,20 +179,20 @@ for(i in seq(length(model_data_explo))){
       }))
 
       set.seed(11081974)
-      # ffs_model <- ffs(m[, meta$predictor_group_final],
-      #                  m$LUI,
-      #                  method = meta$method,
-      #                  metric = "RMSE",
-      #                  seed = 11081974,
-      #                  withinSE = FALSE,
-      #                  trControl = trainControl(method = "cv", index = folds$index)
-      # )
-      #
-      # meta$model <- paste0(
-      #   "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
-      #   paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
-      # )
-      # enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
+      ffs_model <- ffs(m[, meta$predictor_group_final],
+                       m$LUI,
+                       method = meta$method,
+                       metric = "RMSE",
+                       seed = 11081974,
+                       withinSE = FALSE,
+                       trControl = trainControl(method = "cv", index = folds$index)
+      )
+
+      meta$model <- paste0(
+        "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
+        paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
+      )
+      enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
     }
   }
 }
