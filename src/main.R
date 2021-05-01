@@ -148,15 +148,35 @@ meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% me
 rm(sen2_plots, psets, df, df_cmb)
 gc()
 
+explos <- c("ALL", unique(model_data$Explo))
+
 
 
 ### Split data frame by exploratories
-model_data_explo <- lapply(unique(model_data$Explo), function(e){
-  model_data[model_data$Explo == e, ]
+model_data_explo <- lapply(explos, function(e){
+  if(e == "ALL"){
+    act_explo <- model_data
+  } else {
+    act_explo <- model_data[model_data$Explo == e, ]
+  }
+  year_comb <- expand.grid(unique(act_explo$Year), unique(act_explo$Year))
+  year_comb <- year_comb[year_comb$Var1 != year_comb$Var2,]
+
+  act_explo_2y <- lapply(seq(nrow(year_comb)), function(i){
+    act_year <- as.character(unlist(year_comb[i, ]))
+    act <- act_explo[act_explo$Year %in% act_year,]
+    return(list(data = act, act_year = act_year))
+  })
+  names <- lapply(act_explo_2y, `[[`, 2)
+  act_explo_2y <- lapply(act_explo_2y, `[[`, 1)
+  for(i in seq(length(act_explo_2y))){
+    names(act_explo_2y)[i] <- paste(e, paste(names[[i]], collapse = "_"), sep = "_")
+  }
+  act_explo_2y <- c(list(act_explo), act_explo_2y)
+  names(act_explo_2y)[1] <- paste(e, "2017_2018_2019", sep = "_")
+  return(act_explo_2y)
 })
-names(model_data_explo) <- unique(model_data$Explo)
-model_data_explo <- c(list(model_data), model_data_explo)
-names(model_data_explo)[1] <- "ALL"
+names(model_data_explo) <- explos
 
 
 
@@ -164,35 +184,38 @@ names(model_data_explo)[1] <- "ALL"
 cl <- makeCluster(39)
 registerDoParallel(cl)
 
-for(i in seq(length(model_data_explo))){
-  m = model_data_explo[[i]]
-  meta$model_run = names(model_data_explo)[i]
-  for (sv in space_var) {
-    meta$model_run =
-    meta$space_var <- sv
-    if(length(unique(m[, meta$space_var])) > 1){
-      print(meta$space_var)
-      set.seed(11081974)
-      folds <- CreateSpacetimeFolds(m, spacevar = meta$space_var, k = 10, seed = 11081974)
-      meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
-        unique(m[f, meta$space_var])
-      }))
+for(mde in seq(length(model_data_explo))){
+  foreach(i = seq(length(model_data_explo[[mde]])), .packages = c("CAST", "caret", "doParallel")) %dopar% {
+    m = model_data_explo[[mde]][[i]]
+    meta$model_run = names(model_data_explo[[mde]])[i]
+    for (sv in space_var) {
+      meta$model_run =
+        meta$space_var <- sv
+      if(length(unique(m[, meta$space_var])) > 1){
+        print(meta$space_var)
+        set.seed(11081974)
+        folds <- CreateSpacetimeFolds(m, spacevar = meta$space_var, k = 10, seed = 11081974)
+        meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
+          unique(m[f, meta$space_var])
+        }))
 
-      set.seed(11081974)
-      ffs_model <- ffs(m[, meta$predictor_group_final],
-                       m$LUI,
-                       method = meta$method,
-                       metric = "RMSE",
-                       seed = 11081974,
-                       withinSE = FALSE,
-                       trControl = trainControl(method = "cv", index = folds$index)
-      )
+        set.seed(11081974)
+        ffs_model <- ffs(m[, meta$predictor_group_final],
+                         m$LUI,
+                         method = meta$method,
+                         metric = "RMSE",
+                         seed = 11081974,
+                         withinSE = FALSE,
+                         trControl = trainControl(method = "cv", index = folds$index)
+        )
 
-      meta$model <- paste0(
-        "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
-        paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
-      )
-      enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
+        meta$model <- paste0(
+          "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
+          paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
+        )
+        enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
+        gc()
+      }
     }
   }
 }
