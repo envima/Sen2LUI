@@ -136,7 +136,7 @@ meta$model_rows <- nrow(model_data)
 #   cutoff = 0.99, names = TRUE, exact = FALSE
 # )
 # meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
-  # c(meta$cols_meta, meta$correlated_predictors)]
+# c(meta$cols_meta, meta$correlated_predictors)]
 if(meta$use_met_predictory == FALSE){
   meta$cols_meta <- c(meta$cols_meta, meta$met_predictors)
 }
@@ -181,11 +181,15 @@ names(model_data_explo) <- explos
 
 
 ### Train model(s)
-cl <- makeCluster(39)
+cl <- makeCluster(7)
 registerDoParallel(cl)
 
 for(mde in seq(length(model_data_explo))){
   foreach(i = seq(length(model_data_explo[[mde]])), .packages = c("CAST", "caret", "doParallel")) %dopar% {
+
+    cl <- makeCluster(4)
+    registerDoParallel(cl)
+
     m = model_data_explo[[mde]][[i]]
     meta$model_run = names(model_data_explo[[mde]])[i]
     for (sv in space_var) {
@@ -217,6 +221,7 @@ for(mde in seq(length(model_data_explo))){
         gc()
       }
     }
+    stopCluster(cl)
   }
 }
 
