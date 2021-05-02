@@ -181,12 +181,12 @@ gc()
 
 ### Train model(s)
 if (train_model) {
-  cl <- makeCluster(7)
+  cl <- makeCluster(4)
   registerDoParallel(cl)
 
-  for (mde in seq(length(model_data_explo))) {
-    foreach(i = seq(length(model_data_explo[[mde]])), .packages = c("CAST", "caret", "doParallel")) %dopar% {
-      cl <- makeCluster(4)
+  foreach(mde = seq(length(model_data_explo)), .packages = c("CAST", "caret", "doParallel")) %dopar% {
+    for(i in seq(length(model_data_explo[[mde]]))){
+      cl <- makeCluster(2)
       registerDoParallel(cl)
 
       m <- model_data_explo[[mde]][[i]]
@@ -217,8 +217,8 @@ if (train_model) {
             paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
           )
           enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
-          gc()
         }
+        gc()
       }
       stopCluster(cl)
     }
