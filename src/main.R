@@ -18,6 +18,7 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 
 ### Define settings
 compute <- FALSE
+train_model <- TRUE
 meta <- createMeta("Sen2LUI")
 meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")
@@ -130,46 +131,38 @@ if (compute) {
 ### Compile model dataset
 model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$model_dataset])
 model_data <- model_data[complete.cases(model_data), ]
-# model_data <- model_data[, -grep("jd", names(model_data))]
 meta$model_rows <- nrow(model_data)
-# meta$correlated_predictors <- findCorrelation(model_data[, -which(names(model_data) %in% meta$cols_meta)],
-#   cutoff = 0.99, names = TRUE, exact = FALSE
-# )
-# meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
-# c(meta$cols_meta, meta$correlated_predictors)]
-if(meta$use_met_predictory == FALSE){
+meta$correlated_predictors <- findCorrelation(model_data[, -which(names(model_data) %in% meta$cols_meta)],
+  cutoff = 0.99, names = TRUE, exact = FALSE
+)
+meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
+  c(meta$cols_meta, meta$correlated_predictors)]
+if (meta$use_met_predictory == FALSE) {
   meta$cols_meta <- c(meta$cols_meta, meta$met_predictors)
 }
 meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% meta$cols_meta]
 
 
 
-### Save metadata and free memory
-rm(sen2_plots, psets, df, df_cmb)
-gc()
-
-explos <- c("ALL", unique(model_data$Explo))
-
-
-
 ### Split data frame by exploratories
-model_data_explo <- lapply(explos, function(e){
-  if(e == "ALL"){
+explos <- c("ALL", unique(model_data$Explo))
+model_data_explo <- lapply(explos, function(e) {
+  if (e == "ALL") {
     act_explo <- model_data
   } else {
     act_explo <- model_data[model_data$Explo == e, ]
   }
   year_comb <- expand.grid(unique(act_explo$Year), unique(act_explo$Year))
-  year_comb <- year_comb[year_comb$Var1 != year_comb$Var2,]
+  year_comb <- year_comb[year_comb$Var1 != year_comb$Var2, ]
 
-  act_explo_2y <- lapply(seq(nrow(year_comb)), function(i){
+  act_explo_2y <- lapply(seq(nrow(year_comb)), function(i) {
     act_year <- as.character(unlist(year_comb[i, ]))
-    act <- act_explo[act_explo$Year %in% act_year,]
+    act <- act_explo[act_explo$Year %in% act_year, ]
     return(list(data = act, act_year = act_year))
   })
   names <- lapply(act_explo_2y, `[[`, 2)
   act_explo_2y <- lapply(act_explo_2y, `[[`, 1)
-  for(i in seq(length(act_explo_2y))){
+  for (i in seq(length(act_explo_2y))) {
     names(act_explo_2y)[i] <- paste(e, paste(names[[i]], collapse = "_"), sep = "_")
   }
   act_explo_2y <- c(list(act_explo), act_explo_2y)
@@ -180,52 +173,60 @@ names(model_data_explo) <- explos
 
 
 
+### Save metadata and free memory
+rm(sen2_plots, psets, df, df_cmb, model_data)
+gc()
+
+
+
 ### Train model(s)
-cl <- makeCluster(7)
-registerDoParallel(cl)
+if (train_model) {
+  cl <- makeCluster(7)
+  registerDoParallel(cl)
 
-for(mde in seq(length(model_data_explo))){
-  foreach(i = seq(length(model_data_explo[[mde]])), .packages = c("CAST", "caret", "doParallel")) %dopar% {
+  for (mde in seq(length(model_data_explo))) {
+    foreach(i = seq(length(model_data_explo[[mde]])), .packages = c("CAST", "caret", "doParallel")) %dopar% {
+      cl <- makeCluster(4)
+      registerDoParallel(cl)
 
-    cl <- makeCluster(4)
-    registerDoParallel(cl)
+      m <- model_data_explo[[mde]][[i]]
+      meta$model_run <- names(model_data_explo[[mde]])[i]
+      for (sv in space_var) {
+        meta$model_run <-
+          meta$space_var <- sv
+        if (length(unique(m[, meta$space_var])) > 1) {
+          print(meta$space_var)
+          set.seed(11081974)
+          folds <- CreateSpacetimeFolds(m, spacevar = meta$space_var, k = 10, seed = 11081974)
+          meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
+            unique(m[f, meta$space_var])
+          }))
 
-    m = model_data_explo[[mde]][[i]]
-    meta$model_run = names(model_data_explo[[mde]])[i]
-    for (sv in space_var) {
-      meta$model_run =
-        meta$space_var <- sv
-      if(length(unique(m[, meta$space_var])) > 1){
-        print(meta$space_var)
-        set.seed(11081974)
-        folds <- CreateSpacetimeFolds(m, spacevar = meta$space_var, k = 10, seed = 11081974)
-        meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
-          unique(m[f, meta$space_var])
-        }))
+          set.seed(11081974)
+          ffs_model <- ffs(m[, meta$predictor_group_final],
+            m$LUI,
+            method = meta$method,
+            metric = "RMSE",
+            seed = 11081974,
+            withinSE = FALSE,
+            trControl = trainControl(method = "cv", index = folds$index)
+          )
 
-        set.seed(11081974)
-        ffs_model <- ffs(m[, meta$predictor_group_final],
-                         m$LUI,
-                         method = meta$method,
-                         metric = "RMSE",
-                         seed = 11081974,
-                         withinSE = FALSE,
-                         trControl = trainControl(method = "cv", index = folds$index)
-        )
-
-        meta$model <- paste0(
-          "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
-          paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
-        )
-        enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
-        gc()
+          meta$model <- paste0(
+            "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
+            paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
+          )
+          enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
+          gc()
+        }
       }
+      stopCluster(cl)
     }
-    stopCluster(cl)
   }
+
+  stopCluster(cl)
 }
 
-stopCluster(cl)
 
 
 # model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_202104*.rds"),
@@ -262,4 +263,3 @@ stopCluster(cl)
 #   }
 #
 # }
-
