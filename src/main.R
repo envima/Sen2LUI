@@ -203,14 +203,15 @@ if (train_model) {
           }))
 
           set.seed(11081974)
-          ffs_model <- ffs(m[, meta$predictor_group_final],
-            m$LUI,
-            method = meta$method,
-            metric = "RMSE",
-            seed = 11081974,
-            withinSE = FALSE,
-            trControl = trainControl(method = "cv", index = folds$index)
-          )
+          # ffs_model <- ffs(m[, meta$predictor_group_final],
+          #   m$LUI,
+          #   method = meta$method,
+          #   metric = "RMSE",
+          #   seed = 11081974,
+          #   withinSE = FALSE,
+          #   trControl = trainControl(method = "cv", index = folds$index)
+          # )
+          ffs_model <- data.frame(test = "test")
 
           meta$model <- paste0(
             "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
