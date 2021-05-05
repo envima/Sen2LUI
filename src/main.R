@@ -132,16 +132,16 @@ if (compute) {
 model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$model_dataset])
 model_data <- model_data[complete.cases(model_data), ]
 meta$model_rows <- nrow(model_data)
-meta$correlated_predictors <- findCorrelation(model_data[, -which(names(model_data) %in% meta$cols_meta)],
-  cutoff = 0.99, names = TRUE, exact = FALSE
+meta$correlated_predictors <- findCorrelation(cor(model_data[, -which(names(model_data) %in% meta$cols_meta)]),
+  cutoff = 0.50, names = TRUE, exact = TRUE
 )
 meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
   c(meta$cols_meta, meta$correlated_predictors)]
-if (meta$use_met_predictory == FALSE) {
-  meta$cols_meta <- c(meta$cols_meta, meta$met_predictors)
-}
-meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% meta$cols_meta]
-
+# if (meta$use_met_predictory == FALSE) {
+#   meta$cols_meta <- c(meta$cols_meta, meta$met_predictors)
+# }
+# meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% meta$cols_meta]
+meta$predictor_group_final <- meta$predictor_group_final[1:5]
 
 
 ### Split data frame by exploratories
@@ -186,7 +186,7 @@ if (train_model) {
 
   foreach(mde = seq(length(model_data_explo)), .packages = c("CAST", "caret", "doParallel", "envimaR")) %dopar% {
     for(i in seq(length(model_data_explo[[mde]]))){
-      cl <- makeCluster(2)
+      cl <- makeCluster(4)
       registerDoParallel(cl)
 
       m <- model_data_explo[[mde]][[i]]
@@ -203,15 +203,14 @@ if (train_model) {
           }))
 
           set.seed(11081974)
-          # ffs_model <- ffs(m[, meta$predictor_group_final],
-          #   m$LUI,
-          #   method = meta$method,
-          #   metric = "RMSE",
-          #   seed = 11081974,
-          #   withinSE = FALSE,
-          #   trControl = trainControl(method = "cv", index = folds$index)
-          # )
-          ffs_model <- data.frame(test = "test")
+          ffs_model <- ffs(m[, meta$predictor_group_final],
+            m$LUI,
+            method = meta$method,
+            metric = "RMSE",
+            seed = 11081974,
+            withinSE = FALSE,
+            trControl = trainControl(method = "cv", index = folds$index)
+          )
 
           meta$model <- paste0(
             "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
