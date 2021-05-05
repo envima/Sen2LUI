@@ -184,7 +184,7 @@ if (train_model) {
   cl <- makeCluster(4)
   registerDoParallel(cl)
 
-  foreach(mde = seq(length(model_data_explo)), .packages = c("CAST", "caret", "doParallel")) %dopar% {
+  foreach(mde = seq(length(model_data_explo)), .packages = c("CAST", "caret", "doParallel", "envimaR")) %dopar% {
     for(i in seq(length(model_data_explo[[mde]]))){
       cl <- makeCluster(2)
       registerDoParallel(cl)
