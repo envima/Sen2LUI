@@ -132,16 +132,16 @@ if (compute) {
 model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$model_dataset])
 model_data <- model_data[complete.cases(model_data), ]
 meta$model_rows <- nrow(model_data)
+if (meta$use_met_predictory == FALSE) {
+  meta$cols_meta <- c(meta$cols_meta,
+                      colnames(model_data)[which(!is.na(str_locate(colnames(model_data),
+                                                                   paste(meta$met_predictors, collapse = "|"))[,1]))])
+}
 meta$correlated_predictors <- findCorrelation(cor(model_data[, -which(names(model_data) %in% meta$cols_meta)]),
-  cutoff = 0.50, names = TRUE, exact = TRUE
+  cutoff = 0.30, names = TRUE, exact = TRUE
 )
 meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
   c(meta$cols_meta, meta$correlated_predictors)]
-# if (meta$use_met_predictory == FALSE) {
-#   meta$cols_meta <- c(meta$cols_meta, meta$met_predictors)
-# }
-# meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% meta$cols_meta]
-meta$predictor_group_final <- meta$predictor_group_final[1:5]
 
 
 ### Split data frame by exploratories
