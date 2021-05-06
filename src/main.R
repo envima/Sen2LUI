@@ -25,7 +25,7 @@ meta$years <- c("2017", "2018", "2019")
 meta$jd_range <- c(90, 300)
 meta$predictors <- c("NDVI", "REIP", "DSWI", "MCARI", "NDII", "SATVI", "B12")
 meta$met_predictors <- c("Ta_200", "precipitation_radolan")
-meta$use_met_predictory <- FALSE
+meta$use_met_predictory <- TRUE
 meta$model_dataset <- c(
   "2017_Alb", "2018_Alb", "2019_Alb",
   "2017_Hai", "2018_Hai", "2019_Hai",
