@@ -25,7 +25,7 @@ meta$years <- c("2017", "2018", "2019")
 meta$jd_range <- c(90, 300)
 meta$predictors <- c("NDVI", "REIP", "DSWI", "MCARI", "NDII", "SATVI", "B12")
 meta$met_predictors <- c("Ta_200", "precipitation_radolan")
-meta$use_met_predictory <- TRUE
+meta$use_met_predictory <- FALSE
 meta$model_dataset <- c(
   "2017_Alb", "2018_Alb", "2019_Alb",
   "2017_Hai", "2018_Hai", "2019_Hai",
@@ -138,7 +138,7 @@ if (meta$use_met_predictory == FALSE) {
                                                                    paste(meta$met_predictors, collapse = "|"))[,1]))])
 }
 meta$correlated_predictors <- findCorrelation(cor(model_data[, -which(names(model_data) %in% meta$cols_meta)]),
-  cutoff = 0.30, names = TRUE, exact = TRUE
+  cutoff = 0.95, names = TRUE, exact = TRUE
 )
 meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
   c(meta$cols_meta, meta$correlated_predictors)]
