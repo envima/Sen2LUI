@@ -137,7 +137,7 @@ compileDataset <- function(root_folder, compile_sd = NULL) {
     names(act_plots_sd) <- str_replace(names(act_plots_sd), "X", "JD")
 
     lui <- read.csv(file.path(
-      root_folder, "data/raw_data/LUI/",
+      root_folder, "data/raw_data/lui/",
       lui_files[grep(
         paste0(year, "_", substr(act_plots_sd$plotID[1], 1, 1)),
         lui_files

@@ -46,7 +46,7 @@ compileMetDataset <- function(root_folder, met_pars = c("Ta_200", "precipitation
         names(tmp)[-1] <- paste0("JD", names(tmp)[-1])
 
         lui <- read.csv(file.path(
-          root_folder, "data/raw_data/LUI/",
+          root_folder, "data/raw_data/lui/",
           lui_files[grep(
             paste0(y, "_", substr(tmp$plotID[1], 1, 1)),
             lui_files
