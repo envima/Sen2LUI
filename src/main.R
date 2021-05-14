@@ -18,8 +18,8 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 
 
 ### Define settings
-compute <- TRUE
-train_model <- FALSE
+compute <- FALSE
+train_model <- TRUE
 meta <- createMeta("Sen2LUI")
 meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")

@@ -29,7 +29,12 @@ compileModels <- function(model_data_explo, meta, root_folder, ncors) {
 
       m <- model_data_explo[[mde]][[i]]
       meta$model_run <- names(model_data_explo[[mde]])[i]
-      for (sv in meta$space_vars) {
+      if(grepl("ALL", meta$model_run)){
+        space_vars <- meta$space_vars
+      } else {
+        space_vars <- meta$space_vars[!grepl("Explo", meta$space_vars)]
+      }
+      for (sv in space_vars) {
         meta$space_var <- sv
         if (length(unique(m[, meta$space_var])) > 1) {
           print(meta$space_var)

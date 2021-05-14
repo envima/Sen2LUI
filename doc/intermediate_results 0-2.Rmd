@@ -22,7 +22,7 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 
 
 ```{r, echo = FALSE}
-model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_2021051*.rds"),
+model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_20210514_21*.rds"),
                           full.names = TRUE)
 models <- lapply(model_files, function(m){
   enviLoad(m)
