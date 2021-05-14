@@ -18,7 +18,7 @@
 #'
 #' }
 #'
-compileModels <- function(model_data_explo, ncors) {
+compileModels <- function(model_data_explo, meta, root_folder, ncors) {
   cl <- makeCluster(ncors)
   registerDoParallel(cl)
 
@@ -29,7 +29,7 @@ compileModels <- function(model_data_explo, ncors) {
 
       m <- model_data_explo[[mde]][[i]]
       meta$model_run <- names(model_data_explo[[mde]])[i]
-      for (sv in space_var) {
+      for (sv in meta$space_vars) {
         meta$space_var <- sv
         if (length(unique(m[, meta$space_var])) > 1) {
           print(meta$space_var)

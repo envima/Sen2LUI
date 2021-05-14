@@ -46,7 +46,7 @@ compilePredictors <- function(satellite_plots, meteorological_plots, meta, root_
   meta$met_pid <- apply(expand.grid(meta$years, meta$explos, meta$met_predictors), 1, paste, collapse = "_")
   msets <- lapply(meta$met_pid, function(d) {
     print(paste0("Compiling predicor set: ", d))
-    act <- compilePredictors(
+    act <- smoothPredictors(
       data = meteorological_plots[[grep(substr(d, 1, 4), names(meteorological_plots))]][[d]],
       info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], root_folder = root_folder,
       png_prefix = d

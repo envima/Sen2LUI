@@ -1,8 +1,7 @@
 #' Main control script
 #'
-#' @description Use this script for controlling the processing.
+#' @description Predict land use intensity from satellite and environmental observations.
 #'
-#' @author [name], [email@com]
 #'
 
 ### Set evnironment
@@ -34,7 +33,7 @@ meta$model_dataset <- c(
   "2017_Sch", "2018_Sch", "2019_Sch"
 )
 meta$method <- "cubist"
-space_var <- c("Explo_Year", "Year", "Explo")
+meta$space_vars <- c("Explo_Year", "Year", "Explo")
 
 
 
@@ -64,8 +63,12 @@ if (compute) {
     satellite_plots = sen2_plots, meteorological_plots = met_plots,
     meta = meta, root_folder = root_folder
   )
-  enviSave(cp$ssets, file.path(root_folder, "data/compiled_data/", "ssets.rds"), meta = cp$meta)
-  enviSave(cp$msets, file.path(root_folder, "data/compiled_data/", "msets.rds"), meta = cp$meta)
+  ssets <- cp$ssets
+  msets <- cp$msets
+  meta <- cp$meta
+  rm(cp)
+  enviSave(ssets, file.path(root_folder, "data/compiled_data/", "ssets.rds"), meta = meta)
+  enviSave(msets, file.path(root_folder, "data/compiled_data/", "msets.rds"), meta = meta)
 } else {
   ssets <- enviLoad(file.path(root_folder, "data/compiled_data/", "ssets.rds"))$dat
   msets <- enviLoad(file.path(root_folder, "data/compiled_data/", "msets.rds"))$dat
@@ -77,7 +80,10 @@ if (compute) {
 ### Extract actual predictor variables from the overall predictor dataset.
 if (compute) {
   cmd <- compileModelDataset(ssets = ssets, msets = msets, meta = meta, cor_cutoff = 0.95)
-  enviSave(cmd$model_data_explo, file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"), meta = cmd$meta)
+  model_data_explo <- cmd$model_data_explo
+  meta <- cmd$meta
+  enviSave(cmd$model_data_explo, file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"), meta = metaa)
+  rm(cmd)
 } else {
   model_data_explo <- enviLoad(file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"))$dat
   meta <- enviLoad(file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"))$meta
@@ -86,12 +92,12 @@ if (compute) {
 
 
 ### Free memory
-rm(sen2_plots, psets, df, df_cmb, model_data)
+rm(sen2_plots, met_plots, ssets, msets)
 gc()
 
 
 
 ### Train model(s)
 if (train_model) {
-  compileModels(model_data_explo = model_data_explo, ncors = ncors)
+  compileModels(model_data_explo = model_data_explo, meta = meta, root_folder = root_folder, ncors = ncors)
 }
