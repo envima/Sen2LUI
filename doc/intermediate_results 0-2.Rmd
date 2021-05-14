@@ -1,9 +1,11 @@
 ---
 title: "Zwischenergebnis"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(envimaR)
@@ -20,11 +22,24 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 
 
 ```{r, echo = FALSE}
-model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_202104*.rds"),
+model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_2021051*.rds"),
                           full.names = TRUE)
 models <- lapply(model_files, function(m){
   enviLoad(m)
   })
+
+model_performance <- lapply(models, function(m){
+  data.frame(model_run = m$meta$model_run,
+             spacefolds = m$meta$spacefolds,
+             rmse = m$dat$resample[order(m$dat$resample$Resample),"RMSE"],
+             rsquared = m$dat$resample[order(m$dat$resample$Resample),"Rsquared"]
+             )
+})
+model_performance <- do.call("rbind", model_performance)
+
+
+
+
 
 for(m in models){
   print(data.frame(m$meta$predictors))

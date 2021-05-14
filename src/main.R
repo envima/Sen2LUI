@@ -9,16 +9,18 @@
 library(envimaR)
 if (Sys.info()[["nodename"]] == "PC19616") {
   root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
+  ncors <- 2
 } else {
   root_folder <- "~/plygrnd/Sen2LUI"
+  ncors <- 4
 }
 source(file.path(root_folder, "src/functions/000_setup.R"))
 
 
 
 ### Define settings
-compute <- FALSE
-train_model <- TRUE
+compute <- TRUE
+train_model <- FALSE
 meta <- createMeta("Sen2LUI")
 meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")
@@ -57,123 +59,33 @@ if (compute) {
 
 ### Compile predictors
 # Compile predictor dataset containing actual variables and additional information
-cols_meta <- c(seq(1, grep("JD", names(sen2_plots[[1]][[1]]))[1] - 1))
-meta$cols_meta <- names(sen2_plots[[1]][[1]])[cols_meta]
-meta$pid <- apply(expand.grid(meta$years, meta$explos, meta$predictors, c("mean", "sd")), 1, paste, collapse = "_")
 if (compute) {
-  psets <- lapply(meta$pid, function(d) {
-    print(paste0("Compiling predicor set: ", d))
-    act <- compilePredictors(
-      data = sen2_plots[[grep(substr(d, 1, 4), names(sen2_plots))]][[d]],
-      info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], root_folder = root_folder,
-      png_prefix = d
-    )
-    if (!is.null(act$tp_info)) {
-      names(act$tp_info)[-cols_meta] <- paste(substr(
-        d, (str_locate_all(pattern = "_", d)[[1]][2, 1] + 1),
-        nchar(d)
-      ), names(act$tp_info)[-cols_meta], sep = "_")
-    }
-    return(act)
-  })
-  names(psets) <- meta$pid
-  enviSave(psets, file.path(root_folder, "data/compiled_data/", "psets.rds"), meta = meta)
-
-  meta$met_pid <- apply(expand.grid(meta$years, meta$explos, meta$met_predictors), 1, paste, collapse = "_")
-  msets <- lapply(meta$met_pid, function(d) {
-    print(paste0("Compiling predicor set: ", d))
-    act <- compilePredictors(
-      data = met_plots[[grep(substr(d, 1, 4), names(met_plots))]][[d]],
-      info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], root_folder = root_folder,
-      png_prefix = d
-    )
-    if (!is.null(act$tp_info)) {
-      names(act$tp_info)[-cols_meta] <- paste(substr(
-        d, (str_locate_all(pattern = "_", d)[[1]][2, 1] + 1),
-        nchar(d)
-      ), names(act$tp_info)[-cols_meta], sep = "_")
-    }
-    return(act)
-  })
-  names(msets) <- meta$met_pid
-  enviSave(msets, file.path(root_folder, "data/compiled_data/", "msets.rds"), meta = meta)
+  cp <- compilePredictors(
+    satellite_plots = sen2_plots, meteorological_plots = met_plots,
+    meta = meta, root_folder = root_folder
+  )
+  enviSave(cp$ssets, file.path(root_folder, "data/compiled_data/", "ssets.rds"), meta = cp$meta)
+  enviSave(cp$msets, file.path(root_folder, "data/compiled_data/", "msets.rds"), meta = cp$meta)
 } else {
-  psets <- enviLoad(file.path(root_folder, "data/compiled_data/", "psets.rds"))$dat
+  ssets <- enviLoad(file.path(root_folder, "data/compiled_data/", "ssets.rds"))$dat
   msets <- enviLoad(file.path(root_folder, "data/compiled_data/", "msets.rds"))$dat
+  meta <- enviLoad(file.path(root_folder, "data/compiled_data/", "msets.rds"))$meta
 }
 
-# Collect some meta information
-meta$smoothing <- collectMetaSmoothing(data = psets)
-meta$met_smoothing <- collectMetaSmoothing(data = msets)
 
 
-
-# Extract actual predictor variables from the overall predictor dataset.
+### Extract actual predictor variables from the overall predictor dataset.
 if (compute) {
-  df <- lapply(psets, "[[", 1)
-  names(df) <- names(psets)
-
-  df_met <- lapply(msets, "[[", 1)
-  names(df_met) <- names(msets)
-
-  meta$pvid <- apply(expand.grid(meta$years, meta$explos), 1, paste, collapse = "_")
-  df_cmb <- lapply(meta$pvid, function(e) {
-    tmp <- Reduce(function(x, y) merge(x, y, all = TRUE), df[grep(e, names(df))])
-    tmp_met <- Reduce(function(x, y) merge(x, y, all = TRUE), df_met[grep(e, names(df_met))])
-    return(merge(tmp, tmp_met))
-  })
-  names(df_cmb) <- meta$pvid
-  enviSave(df_cmb, file.path(root_folder, "data/compiled_data/", "df_cmb.rds"), meta = meta)
+  cmd <- compileModelDataset(ssets = ssets, msets = msets, meta = meta, cor_cutoff = 0.95)
+  enviSave(cmd$model_data_explo, file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"), meta = cmd$meta)
 } else {
-  df_cmb <- enviLoad(file.path(root_folder, "data/compiled_data/", "df_cmb.rds"))$dat
+  model_data_explo <- enviLoad(file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"))$dat
+  meta <- enviLoad(file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"))$meta
 }
 
-### Compile model dataset
-model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$model_dataset])
-model_data <- model_data[complete.cases(model_data), ]
-meta$model_rows <- nrow(model_data)
-if (meta$use_met_predictory == FALSE) {
-  meta$cols_meta <- c(meta$cols_meta,
-                      colnames(model_data)[which(!is.na(str_locate(colnames(model_data),
-                                                                   paste(meta$met_predictors, collapse = "|"))[,1]))])
-}
-meta$correlated_predictors <- findCorrelation(cor(model_data[, -which(names(model_data) %in% meta$cols_meta)]),
-  cutoff = 0.95, names = TRUE, exact = TRUE
-)
-meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
-  c(meta$cols_meta, meta$correlated_predictors)]
 
 
-### Split data frame by exploratories
-explos <- c("ALL", unique(model_data$Explo))
-model_data_explo <- lapply(explos, function(e) {
-  if (e == "ALL") {
-    act_explo <- model_data
-  } else {
-    act_explo <- model_data[model_data$Explo == e, ]
-  }
-  year_comb <- expand.grid(unique(act_explo$Year), unique(act_explo$Year))
-  year_comb <- year_comb[year_comb$Var1 != year_comb$Var2, ]
-
-  act_explo_2y <- lapply(seq(nrow(year_comb)), function(i) {
-    act_year <- as.character(unlist(year_comb[i, ]))
-    act <- act_explo[act_explo$Year %in% act_year, ]
-    return(list(data = act, act_year = act_year))
-  })
-  names <- lapply(act_explo_2y, `[[`, 2)
-  act_explo_2y <- lapply(act_explo_2y, `[[`, 1)
-  for (i in seq(length(act_explo_2y))) {
-    names(act_explo_2y)[i] <- paste(e, paste(names[[i]], collapse = "_"), sep = "_")
-  }
-  act_explo_2y <- c(list(act_explo), act_explo_2y)
-  names(act_explo_2y)[1] <- paste(e, "2017_2018_2019", sep = "_")
-  return(act_explo_2y)
-})
-names(model_data_explo) <- explos
-
-
-
-### Save metadata and free memory
+### Free memory
 rm(sen2_plots, psets, df, df_cmb, model_data)
 gc()
 
@@ -181,85 +93,5 @@ gc()
 
 ### Train model(s)
 if (train_model) {
-  cl <- makeCluster(4)
-  registerDoParallel(cl)
-
-  foreach(mde = seq(length(model_data_explo)), .packages = c("CAST", "caret", "doParallel", "envimaR")) %dopar% {
-    for(i in seq(length(model_data_explo[[mde]]))){
-      cl <- makeCluster(4)
-      registerDoParallel(cl)
-
-      m <- model_data_explo[[mde]][[i]]
-      meta$model_run <- names(model_data_explo[[mde]])[i]
-      for (sv in space_var) {
-        meta$model_run <-
-          meta$space_var <- sv
-        if (length(unique(m[, meta$space_var])) > 1) {
-          print(meta$space_var)
-          set.seed(11081974)
-          folds <- CreateSpacetimeFolds(m, spacevar = meta$space_var, k = 10, seed = 11081974)
-          meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
-            unique(m[f, meta$space_var])
-          }))
-
-          set.seed(11081974)
-          ffs_model <- ffs(m[, meta$predictor_group_final],
-            m$LUI,
-            method = meta$method,
-            metric = "RMSE",
-            seed = 11081974,
-            withinSE = FALSE,
-            trControl = trainControl(method = "cv", index = folds$index)
-          )
-
-          meta$model <- paste0(
-            "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
-            paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
-          )
-          enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
-        }
-        gc()
-      }
-      stopCluster(cl)
-    }
-  }
-
-  stopCluster(cl)
+  compileModels(model_data_explo = model_data_explo, ncors = ncors)
 }
-
-
-
-# model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_202104*.rds"),
-#                           full.names = TRUE)
-# models <- lapply(model_files, function(m){
-#   enviLoad(m)
-#   })
-#
-#
-#
-#
-#
-#
-#
-# for(m in models){
-#   print(data.frame(m$meta$use_met_predictory))
-#     print(data.frame(m$meta$use_met_predictory))
-#     print(m$dat$selectedvars)
-#     print(data.frame(m$dat$resample[order(m$dat$resample$Resample),"Rsquared"], m$meta$spacefolds))
-#
-# }
-#
-#
-# for (sv in space_var) {
-#   meta$space_var <- sv
-#   meta$space_var <- space_var[[1]]
-#   if(length(unique(model_data_explo[[1]][, meta$space_var])) > 1){
-#     set.seed(11081974)
-#     folds <- CreateSpacetimeFolds(model_data_explo[[1]], spacevar = meta$space_var, k = 10, seed = 11081974)
-#     meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
-#       unique(model_data_explo[[1]][f, meta$space_var])
-#     }))
-#
-#   }
-#
-# }
