@@ -82,7 +82,7 @@ if (compute) {
   cmd <- compileModelDataset(ssets = ssets, msets = msets, meta = meta, cor_cutoff = 0.95)
   model_data_explo <- cmd$model_data_explo
   meta <- cmd$meta
-  enviSave(cmd$model_data_explo, file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"), meta = metaa)
+  enviSave(cmd$model_data_explo, file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"), meta = meta)
   rm(cmd)
 } else {
   model_data_explo <- enviLoad(file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"))$dat
