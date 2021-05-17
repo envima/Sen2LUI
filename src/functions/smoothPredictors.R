@@ -21,7 +21,7 @@
 #'
 #' }
 #'
-smoothPredictors <- function(data, info_year, jd_start, jd_end, root_folder = NULL, png_prefix = NULL) {
+smoothPredictors <- function(data, info_year, jd_start, jd_end, met = FALSE, root_folder = NULL, png_prefix = NULL) {
   jds <- seq(jd_start, jd_end)
 
   tp_data <- lapply(seq(nrow(data)), function(p) {
@@ -35,24 +35,33 @@ smoothPredictors <- function(data, info_year, jd_start, jd_end, root_folder = NU
     # ggplot(data = act_df, aes(x = d, y = v)) + geom_point() + geom_smooth(method = "gam")
 
     if ((nrow(act_df) - 10) >= sum(is.na(act_df$v))) {
-      set.seed(11081974)
-      gm <- gam(v ~ s(d, k = -1, bs = "cr"), data = act_df)
-      # coef(gm)
-      gm_pred <- predict(gm, data.frame(d = jds))
-      ts_y <- ts(as.numeric(gm_pred), start = jd_start, end = jd_end)
-      tp <- turnpoints(ts_y)
-      smooth_term <- 's(d, k = -1, bs = "cr")'
-
-      # If standard smooth term approach leads to 0 turning points, use cyclic cubic regression splines instead to
-      # get a fit which is not linear.
-      if (tp$nturns == 0) {
+      if(met == FALSE){
         set.seed(11081974)
-        gm <- gam(v ~ s(d, k = -1, bs = "cc"), data = act_df)
+        gm <- gam(v ~ s(d, k = -1, bs = "cr"), data = act_df)
+        # coef(gm)
         gm_pred <- predict(gm, data.frame(d = jds))
         ts_y <- ts(as.numeric(gm_pred), start = jd_start, end = jd_end)
         tp <- turnpoints(ts_y)
-        smooth_term <- 's(d, k = -1, bs = "cc")'
+        smooth_term <- 's(d, k = -1, bs = "cr")'
+
+        # If standard smooth term approach leads to 0 turning points, use cyclic cubic regression splines instead to
+        # get a fit which is not linear.
+        if (tp$nturns == 0) {
+          set.seed(11081974)
+          gm <- gam(v ~ s(d, k = -1, bs = "cc"), data = act_df)
+          gm_pred <- predict(gm, data.frame(d = jds))
+          ts_y <- ts(as.numeric(gm_pred), start = jd_start, end = jd_end)
+          tp <- turnpoints(ts_y)
+          smooth_term <- 's(d, k = -1, bs = "cc")'
+        }
+      } else {
+        gm <- NULL
+        gm_pred <- as.numeric(act_df[act_df$d >= jd_start & act_df$d <= jd_end, "v"])
+        ts_y <- ts(gm_pred, start = jd_start, end = jd_end)
+        tp <- turnpoints(ts_y)
+        smooth_term <- 'original data series'
       }
+
 
       if (tp$firstispeak == FALSE | is.na(tp$firstispeak)) {
         typep <- c("pit", "peak")

@@ -29,8 +29,8 @@ compilePredictors <- function(satellite_plots, meteorological_plots, meta, root_
     print(paste0("Compiling predicor set: ", d))
     act <- smoothPredictors(
       data = satellite_plots[[grep(substr(d, 1, 4), names(satellite_plots))]][[d]],
-      info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], root_folder = root_folder,
-      png_prefix = d
+      info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], met = FALSE,
+      root_folder = root_folder, png_prefix = d
     )
     if (!is.null(act$tp_info)) {
       names(act$tp_info)[-cols_meta] <- paste(substr(
@@ -48,8 +48,8 @@ compilePredictors <- function(satellite_plots, meteorological_plots, meta, root_
     print(paste0("Compiling predicor set: ", d))
     act <- smoothPredictors(
       data = meteorological_plots[[grep(substr(d, 1, 4), names(meteorological_plots))]][[d]],
-      info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], root_folder = root_folder,
-      png_prefix = d
+      info_year = substr(d, 1, 4), jd_start = meta$jd_range[1], jd_end = meta$jd_range[2], met = TRUE,
+      root_folder = root_folder, png_prefix = d
     )
     if (!is.null(act$tp_info)) {
       names(act$tp_info)[-cols_meta] <- paste(substr(
