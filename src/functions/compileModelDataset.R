@@ -49,12 +49,17 @@ compileModelDataset <- function(ssets, msets, meta, cor_cutoff = 0.95) {
       )[, 1]))]
     )
   }
-  meta$correlated_predictors <- findCorrelation(cor(model_data[, -which(names(model_data) %in% meta$cols_meta)]),
+
+  meta$predictor_with_unique_values <- names(which(apply(model_data[, -which(names(model_data) %in% meta$cols_meta)],
+                                                         2, function(x) length(unique(x))) == 1))
+  if(length(meta$predictor_with_unique_values) != 0){
+    cols_exclude <- c(meta$cols_meta, meta$predictor_with_unique_values)
+  }
+
+  meta$correlated_predictors <- findCorrelation(cor(model_data[, -which(names(model_data) %in% cols_exclude)]),
     cutoff = cor_cutoff, names = TRUE, exact = TRUE
   )
-  meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in%
-    c(meta$cols_meta, meta$correlated_predictors)]
-
+  meta$predictor_group_final <- colnames(model_data)[!colnames(model_data) %in% cols_exclude]
 
 
   ### Split data frame by exploratories
@@ -85,3 +90,10 @@ compileModelDataset <- function(ssets, msets, meta, cor_cutoff = 0.95) {
 
   return(list(model_data_explo = model_data_explo, meta = meta))
 }
+
+
+
+
+
+
+df_met <- lapply(msets, "[[", 1)
