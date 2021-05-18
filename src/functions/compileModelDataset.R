@@ -5,6 +5,7 @@
 #' @param ssets Satellite predictors.
 #' @param msets Meteorological predictors.
 #' @param meta Meta information dataset (initialized with envimaR::createMeta)
+#' @param act_predictor_group Group of predictors to be considered (one of "sat", "met" or "both").
 #' @param cor_cutoff Cut off correlation value for removing highly correlated predictors from final set.
 #'
 #' @return Model dataset.
@@ -19,7 +20,9 @@
 #' }
 #'
 #' ### Extract actual predictor variables from the overall predictor dataset.
-compileModelDataset <- function(ssets, msets, meta, cor_cutoff = 0.95) {
+compileModelDataset <- function(ssets, msets, meta, act_predictor_group, cor_cutoff = 0.95) {
+  meta$predictor_group = act_predictor_group
+
   df <- lapply(ssets, "[[", 1)
   names(df) <- names(ssets)
 
@@ -40,7 +43,8 @@ compileModelDataset <- function(ssets, msets, meta, cor_cutoff = 0.95) {
   model_data <- Reduce(function(x, y) rbind(x, y), df_cmb[meta$model_dataset])
   model_data <- model_data[complete.cases(model_data), ]
   meta$model_rows <- nrow(model_data)
-  if (meta$use_met_predictory == FALSE) {
+
+  if (act_predictor_group == "sat") {
     meta$cols_meta <- c(
       meta$cols_meta,
       colnames(model_data)[which(!is.na(str_locate(
@@ -48,13 +52,21 @@ compileModelDataset <- function(ssets, msets, meta, cor_cutoff = 0.95) {
         paste(meta$met_predictors, collapse = "|")
       )[, 1]))]
     )
+  } else if (act_predictor_group == "met") {
+    meta$cols_meta <- c(
+      meta$cols_meta,
+      colnames(model_data)[!colnames(model_data) %in% c(
+        meta$cols_meta,
+        colnames(model_data)[which(!is.na(str_locate(
+          colnames(model_data),
+          paste(meta$met_predictors, collapse = "|")
+        )[, 1]))])]
+    )
   }
 
   meta$predictor_with_unique_values <- names(which(apply(model_data[, -which(names(model_data) %in% meta$cols_meta)],
                                                          2, function(x) length(unique(x))) == 1))
-  if(length(meta$predictor_with_unique_values) != 0){
-    cols_exclude <- c(meta$cols_meta, meta$predictor_with_unique_values)
-  }
+  cols_exclude <- c(meta$cols_meta, meta$predictor_with_unique_values)
 
   meta$correlated_predictors <- findCorrelation(cor(model_data[, -which(names(model_data) %in% cols_exclude)]),
     cutoff = cor_cutoff, names = TRUE, exact = TRUE
@@ -90,10 +102,3 @@ compileModelDataset <- function(ssets, msets, meta, cor_cutoff = 0.95) {
 
   return(list(model_data_explo = model_data_explo, meta = meta))
 }
-
-
-
-
-
-
-df_met <- lapply(msets, "[[", 1)

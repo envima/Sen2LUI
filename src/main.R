@@ -20,13 +20,13 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 ### Define settings
 compute <- TRUE
 train_model <- TRUE
+use_predictor_group <- c("sat", "met", "sat_met")
 meta <- createMeta("Sen2LUI")
 meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")
 meta$jd_range <- c(90, 300)
 meta$predictors <- c("NDVI", "REIP", "DSWI", "MCARI", "NDII", "SATVI", "B12")
 meta$met_predictors <- c("Ta_200", "precipitation_radolan")
-meta$use_met_predictory <- TRUE
 meta$model_dataset <- c(
   "2017_Alb", "2018_Alb", "2019_Alb",
   "2017_Hai", "2018_Hai", "2019_Hai",
@@ -76,17 +76,22 @@ if (compute) {
 }
 
 
-
 ### Extract actual predictor variables from the overall predictor dataset.
 if (compute) {
-  cmd <- compileModelDataset(ssets = ssets, msets = msets, meta = meta, cor_cutoff = 0.95)
-  model_data_explo <- cmd$model_data_explo
-  meta <- cmd$meta
-  enviSave(cmd$model_data_explo, file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"), meta = meta)
-  rm(cmd)
+  model_datasets <- lapply(use_predictor_group, function(g){
+    cmd <- compileModelDataset(ssets = ssets, msets = msets, meta = meta, act_predictor_group = g, cor_cutoff = 0.95)
+    model_data_explo <- cmd$model_data_explo
+    meta <- cmd$meta
+    enviSave(cmd$model_data_explo, file.path(root_folder, "data/compiled_data/",
+                                             paste0("model_data_explo_", meta$predictor_group, ".rds")), meta = meta)
+    rm(cmd)
+  })
+  names(model_datasets) <- use_predictor_group
 } else {
-  model_data_explo <- enviLoad(file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"))$dat
-  meta <- enviLoad(file.path(root_folder, "data/compiled_data/", "model_data_explo.rds"))$meta
+  model_datasets <- lapply(use_predictor_group, function(g){
+  enviLoad(file.path(root_folder, "data/compiled_data/", paste0("model_data_explo_", g, ".rds")))
+  })
+  names(model_datasets) <- use_predictor_group
 }
 
 
@@ -99,5 +104,9 @@ gc()
 
 ### Train model(s)
 if (train_model) {
-  compileModels(model_data_explo = model_data_explo, meta = meta, root_folder = root_folder, ncors = ncors)
+  for(g in names(model_datasets)){
+    model_data_explo <- model_datasets[[g]]$dat
+    meta <- model_datasets[[g]]$meta
+    compileModels(model_data_explo = model_data_explo, meta = meta, root_folder = root_folder, ncors = ncors)
+  }
 }

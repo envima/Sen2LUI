@@ -56,7 +56,7 @@ compileModels <- function(model_data_explo, meta, root_folder, ncors) {
 
           meta$model <- paste0(
             "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
-            paste(meta$model_dataset, collapse = "_"), "_", meta$method, ".rds"
+            paste(meta$model_dataset, collapse = "_"), "_", meta$method, "_", meta$predictor_group, ".rds"
           )
           enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
         }
