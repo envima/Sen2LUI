@@ -6,6 +6,8 @@
 #' @param msets Meteorological predictors.
 #' @param meta Meta information dataset (initialized with envimaR::createMeta)
 #' @param cor_cutoff Cut off correlation value for removing highly correlated predictors from final set.
+#' @param root_folder Path to folder for saving pngs. The pngs are not required and have just an informative purpose
+#' @param ncors Number of cores to be used.
 #'
 #' @return Model dataset.
 #'
@@ -22,44 +24,25 @@ compileModels <- function(model_data_explo, meta, root_folder, ncors) {
   cl <- makeCluster(ncors)
   registerDoParallel(cl)
 
-  foreach(mde = seq(length(model_data_explo)), .packages = c("CAST", "caret", "doParallel", "envimaR")) %dopar% {
+  foreach(
+    mde = seq(length(model_data_explo)), errorhandling = "stop",
+    .packages = c("CAST", "caret", "doParallel", "envimaR"), .export = "trainActualModel"
+  ) %dopar% {
     for (i in seq(length(model_data_explo[[mde]]))) {
       cl <- makeCluster(ncors)
       registerDoParallel(cl)
 
       m <- model_data_explo[[mde]][[i]]
       meta$model_run <- names(model_data_explo[[mde]])[i]
-      if(grepl("ALL", meta$model_run)){
+      if (grepl("ALL", meta$model_run)) {
         space_vars <- meta$space_vars
       } else {
         space_vars <- meta$space_vars[!grepl("Explo", meta$space_vars)]
       }
       for (sv in space_vars) {
-        meta$space_var <- sv
-        if (length(unique(m[, meta$space_var])) > 1) {
-          print(meta$space_var)
-          set.seed(11081974)
-          folds <- CreateSpacetimeFolds(m, spacevar = meta$space_var, k = 10, seed = 11081974)
-          meta$spacefolds <- unlist(lapply(folds$indexOut, function(f) {
-            unique(m[f, meta$space_var])
-          }))
 
-          set.seed(11081974)
-          ffs_model <- ffs(m[, meta$predictor_group_final],
-                           m$LUI,
-                           method = meta$method,
-                           metric = "RMSE",
-                           seed = 11081974,
-                           withinSE = FALSE,
-                           trControl = trainControl(method = "cv", index = folds$index)
-          )
-
-          meta$model <- paste0(
-            "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
-            paste(meta$model_dataset, collapse = "_"), "_", meta$method, "_", meta$predictor_group, ".rds"
-          )
-          enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
-        }
+        trainActualModel(m = m, meta = meta, sv = sv, root_folder = root_folder)
+        # tryCatch(trainActualModel(m = m, meta = meta, sv = sv, root_folder = root_folder), error = function(e) e)
         gc()
       }
       stopCluster(cl)

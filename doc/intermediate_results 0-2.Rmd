@@ -20,9 +20,8 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 
 ## Modellergebnisse
 
-
 ```{r, echo = FALSE}
-model_files <- list.files(file.path(root_folder, "data/results/models/sat/"),
+model_files <- list.files(file.path(root_folder, "data/results/models/sat_met/"),
   pattern = glob2rx("model_202105*.rds"),
   full.names = TRUE
 )
@@ -83,6 +82,34 @@ ggplot(
     panel.grid.major = element_blank(), panel.grid.minor = element_blank()
   ) +
   facet_wrap(~spacefolds)
+
+```
+
+
+## Variablen
+
+```{r, echo = FALSE}
+model_files <- list.files(file.path(root_folder, "data/results/models/sat_met/"),
+  pattern = glob2rx("model_202105*.rds"),
+  full.names = TRUE
+)
+models <- lapply(model_files, function(m) {
+  enviLoad(m)
+})
+
+model_variables <- lapply(models, function(m) {
+  tmp <- varImp(m$dat, scale = FALSE)$importance
+  df <- data.frame(model_run = rep(m$meta$model_run, nrow(tmp)),
+             spacefolds = rep(m$meta$spacefolds, nrow(tmp)),
+             predictors = rownames(tmp),
+             predictor_importance = tmp$Overall)
+  })
+model_variables <- do.call("rbind", model_variables)
+
+predictor_importance <- aggregate(model_variables$predictor_importance, by = list(model_variables$predictors), 
+                                  FUN = mean)
+names(predictor_importance) <- c("Predictors", "Importance")
+predictor_importance[order(predictor_importance$Importance, decreasing = TRUE), ]
 
 ```
 

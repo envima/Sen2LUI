@@ -20,7 +20,7 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 ### Define settings
 compute <- TRUE
 train_model <- TRUE
-use_predictor_group <- "met" # c("sat", "met", "sat_met")
+use_predictor_group <- "sat_met" # c("sat", "met", "sat_met")
 meta <- createMeta("Sen2LUI")
 meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")
@@ -80,11 +80,9 @@ if (compute) {
 if (compute) {
   model_datasets <- lapply(use_predictor_group, function(g){
     cmd <- compileModelDataset(ssets = ssets, msets = msets, meta = meta, act_predictor_group = g, cor_cutoff = 0.95)
-    model_data_explo <- cmd$model_data_explo
-    meta <- cmd$meta
     enviSave(cmd$model_data_explo, file.path(root_folder, "data/compiled_data/",
                                              paste0("model_data_explo_", meta$predictor_group, ".rds")), meta = meta)
-    rm(cmd)
+    return(list(dat = cmd$model_data_explo, meta = cmd$meta))
   })
   names(model_datasets) <- use_predictor_group
 } else {
