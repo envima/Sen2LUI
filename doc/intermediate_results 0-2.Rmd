@@ -22,40 +22,67 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 
 
 ```{r, echo = FALSE}
-model_files <- list.files(file.path(root_folder, "data/results/models/"), pattern = glob2rx("model_20210514_21*.rds"),
-                          full.names = TRUE)
-models <- lapply(model_files, function(m){
+model_files <- list.files(file.path(root_folder, "data/results/models/sat/"),
+  pattern = glob2rx("model_202105*.rds"),
+  full.names = TRUE
+)
+models <- lapply(model_files, function(m) {
   enviLoad(m)
-  })
+})
 
-model_performance <- lapply(models, function(m){
-  data.frame(model_run = m$meta$model_run,
-             spacefolds = m$meta$spacefolds,
-             rmse = m$dat$resample[order(m$dat$resample$Resample),"RMSE"],
-             rsquared = m$dat$resample[order(m$dat$resample$Resample),"Rsquared"]
-             )
+model_performance <- lapply(models, function(m) {
+  data.frame(
+    model_run = m$meta$model_run,
+    spacefolds = m$meta$spacefolds,
+    rmse = m$dat$resample[order(m$dat$resample$Resample), "RMSE"],
+    rsquared = m$dat$resample[order(m$dat$resample$Resample), "Rsquared"]#, predictor_group = meta$predictor_group
+  )
 })
 model_performance <- do.call("rbind", model_performance)
 
+# Add SEG_2017 (only for plot layout reasons)
+model_performance <- rbind(
+  model_performance,
+  data.frame(
+    model_run = unique(model_performance[model_performance$spacefolds == "AEG_2017", "model_run"]),
+    spacefolds = "SEG_2017",
+    rmse = NA,
+    rsquared = NA
+  )
+)
+
+spacefolds_years <- c("2017", "2018", "2019")
+
+ggplot(
+  data = model_performance[model_performance$spacefolds %in% spacefolds_years, ],
+  mapping = aes(x = model_run, y = rsquared)
+) +
+  geom_col(position = "dodge") +
+  labs(x = "Model dataset used for training", y = expression(r^2)) +
+  theme_bw() +
+  theme(
+    text = element_text(size = 10), axis.title = element_text(size = 10), legend.text = element_text(size = 10),
+    legend.position = c(0.2, 0.7), axis.text.x = element_text(angle = 90, hjust = 0.95, vjust = 0.2),
+    legend.title = element_blank(), panel.background = element_blank(),
+    panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+  ) +
+  facet_wrap(~spacefolds)
 
 
-
-
-for(m in models){
-  print(data.frame(m$meta$predictors))
-  print(data.frame(m$dat$resample[order(m$dat$resample$Resample),"Rsquared"], m$meta$spacefolds))
-}
-
-
-
-for(i in seq(length(mdls))){
-print(mdls[[i]]$meta$method)
-print(mdls[[i]]$meta$act_model)
-print(cbind(mdls[[i]]$dat$resample[order(mdls[[i]]$dat$resample$Resample),], mdls[[i]]$meta$spacefolds))
-print(varImp(mdls[[i]]$dat))
-print("\n\n")
-}
-
+ggplot(
+  data = model_performance[!model_performance$spacefolds %in% spacefolds_years, ],
+  mapping = aes(x = model_run, y = rsquared)
+) +
+  geom_col(position = "dodge") +
+  labs(x = "Model dataset used for training", y = expression(r^2)) +
+  theme_bw() +
+  theme(
+    text = element_text(size = 10), axis.title = element_text(size = 10), legend.text = element_text(size = 10),
+    legend.position = c(0.2, 0.7), axis.text.x = element_text(angle = 90, hjust = 0.95, vjust = 0.2),
+    legend.title = element_blank(), panel.background = element_blank(),
+    panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+  ) +
+  facet_wrap(~spacefolds)
 
 ```
 

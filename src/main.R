@@ -20,7 +20,7 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 ### Define settings
 compute <- TRUE
 train_model <- TRUE
-use_predictor_group <- c("sat", "met", "sat_met")
+use_predictor_group <- "met" # c("sat", "met", "sat_met")
 meta <- createMeta("Sen2LUI")
 meta$explos <- c("Alb", "Hai", "Sch")
 meta$years <- c("2017", "2018", "2019")
