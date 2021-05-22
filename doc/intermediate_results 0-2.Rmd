@@ -21,8 +21,8 @@ source(file.path(root_folder, "src/functions/000_setup.R"))
 ## Modellergebnisse
 
 ```{r, echo = FALSE}
-model_files <- list.files(file.path(root_folder, "data/results/models/sat_met/"),
-  pattern = glob2rx("model_202105*.rds"),
+model_files <- list.files(file.path(root_folder, "data/results/models/"),
+  pattern = glob2rx("*sat.rds"),
   full.names = TRUE
 )
 models <- lapply(model_files, function(m) {

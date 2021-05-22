@@ -20,17 +20,15 @@
 #'
 #' }
 #'
-compileModels <- function(model_data_explo, meta, root_folder, ncors) {
-  cl <- makeCluster(ncors)
-  registerDoParallel(cl)
+compileModels <- function(model_data_explo, meta, root_folder, ncors_compile_models, ncors_ffsp) {
+  cl_ncors_compile_models <- makeCluster(ncors_compile_models)
+  registerDoParallel(cl_ncors_compile_models)
 
   foreach(
     mde = seq(length(model_data_explo)), errorhandling = "stop",
-    .packages = c("CAST", "caret", "doParallel", "envimaR"), .export = "trainActualModel"
+    .packages = c("CAST", "caret", "doParallel", "envimaR"), .export = c("trainActualModel", "ffsp")
   ) %dopar% {
     for (i in seq(length(model_data_explo[[mde]]))) {
-      cl <- makeCluster(ncors)
-      registerDoParallel(cl)
 
       m <- model_data_explo[[mde]][[i]]
       meta$model_run <- names(model_data_explo[[mde]])[i]
@@ -41,12 +39,10 @@ compileModels <- function(model_data_explo, meta, root_folder, ncors) {
       }
       for (sv in space_vars) {
 
-        trainActualModel(m = m, meta = meta, sv = sv, root_folder = root_folder)
-        # tryCatch(trainActualModel(m = m, meta = meta, sv = sv, root_folder = root_folder), error = function(e) e)
+        trainActualModel(m = m, meta = meta, sv = sv, root_folder = root_folder, ncors_ffsp = ncors_ffsp)
         gc()
       }
-      stopCluster(cl)
     }
   }
-  stopCluster(cl)
+  stopCluster(cl_ncors_compile_models)
 }

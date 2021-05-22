@@ -8,10 +8,12 @@
 library(envimaR)
 if (Sys.info()[["nodename"]] == "PC19616") {
   root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
-  ncors <- 2
+  ncors_compile_models <- 2
+  ncors_ffsp <- 2
 } else {
   root_folder <- "~/plygrnd/Sen2LUI"
-  ncors <- 4
+  ncors_compile_models <- 2
+  ncors_ffsp <- 30
 }
 source(file.path(root_folder, "src/functions/000_setup.R"))
 
@@ -105,6 +107,7 @@ if (train_model) {
   for(g in names(model_datasets)){
     model_data_explo <- model_datasets[[g]]$dat
     meta <- model_datasets[[g]]$meta
-    compileModels(model_data_explo = model_data_explo, meta = meta, root_folder = root_folder, ncors = ncors)
+    compileModels(model_data_explo = model_data_explo, meta = meta, root_folder = root_folder,
+                  ncors_compile_models = ncors_compile_models, ncors_ffsp = ncors_ffsp)
   }
 }

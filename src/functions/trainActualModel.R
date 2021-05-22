@@ -6,6 +6,7 @@
 #' @param meta Meta information dataset (initialized with envimaR::createMeta)
 #' @param sv Actual space variable used for creating the training/test folds.
 #' @param root_folder Path to folder for saving pngs. The pngs are not required and have just an informative purpose
+#' @param ncors_ffsp Cores to be used in ffs.
 #'
 #' @return Nothing.
 #'
@@ -18,7 +19,7 @@
 #'
 #' }
 #'
-trainActualModel <- function(m, meta, sv, root_folder){
+trainActualModel <- function(m, meta, sv, root_folder, ncors_ffsp) {
   meta$space_var <- sv
   if (length(unique(m[, meta$space_var])) > 1) {
     print(meta$space_var)
@@ -38,19 +39,31 @@ trainActualModel <- function(m, meta, sv, root_folder){
     yaml::write_yaml(log_info, file.path(root_folder, "data/tmp/", paste0(log_info$name, ".yaml")))
 
     set.seed(11081974)
-    ffs_model <- ffs(m[, meta$predictor_group_final],
-                     m$LUI,
-                     method = meta$method,
-                     metric = "RMSE",
-                     seed = 11081974,
-                     withinSE = FALSE,
-                     trControl = trainControl(method = "cv", index = folds$index)
+
+    ffs_model <- tryCatch(ffsp(
+      predictors = m[, meta$predictor_group_final],
+      response = m$LUI,
+      method = meta$method,
+      metric = "RMSE",
+      seed = 11081974,
+      withinSE = FALSE,
+      trControl = trainControl(method = "cv", index = folds$index),
+      ncors = ncors_ffsp
+    ),
+    error = function(e) e
     )
 
     meta$model <- paste0(
       "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
       paste(meta$model_dataset, collapse = "_"), "_", meta$method, "_", meta$predictor_group, ".rds"
     )
-    enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
+
+    if (any(class(ffs_model) == "train")) {
+      enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
+    } else {
+      meta <- c(meta, log_info)
+      meta$model <- paste0("error_", meta$model)
+      enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)
+    }
   }
 }
