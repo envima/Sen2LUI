@@ -9,18 +9,18 @@ library(envimaR)
 if (Sys.info()[["nodename"]] == "PC19616") {
   root_folder <- "D:/plygrnd/Sen2LUI/Sen2LUI"
   ncors_compile_models <- 2
-  ncors_ffsp <- 2
+  ncors_ffsp <- 4
 } else {
   root_folder <- "~/plygrnd/Sen2LUI"
   ncors_compile_models <- 2
-  ncors_ffsp <- 35
+  ncors_ffsp <- 20
 }
 source(file.path(root_folder, "src/functions/000_setup.R"))
 
 
 
 ### Define settings
-compute <- TRUE
+compute <- FALSE
 train_model <- TRUE
 use_predictor_group <- c("sat", "met", "sat_met")
 meta <- createMeta("Sen2LUI")

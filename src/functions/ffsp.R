@@ -179,6 +179,7 @@ ffsp <- function(predictors,
   minGrid <- t(data.frame(combn(names(predictors), minVar)))
 
   ### start parallel processing
+  print(paste0("Cores registred: ", getDoParRegistered()))
   if (getDoParRegistered()) {
     `%d%` <- `%dopar%`
   } else {

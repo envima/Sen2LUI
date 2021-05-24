@@ -34,13 +34,9 @@ trainActualModel <- function(m, meta, sv, root_folder, ncors_ffsp) {
       "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
       paste(meta$model_dataset, collapse = "_"), "_", meta$method, "_", meta$predictor_group
     )
-    log_info$mde <- mde
-    log_info$i <- i
     yaml::write_yaml(log_info, file.path(root_folder, "data/tmp/", paste0(log_info$name, ".yaml")))
 
-    cl_ncors <- makeCluster(ncors_ffsp,
-      outfile = file.path(root_folder, paste0(format(Sys.time(), "%Y%m%d_%H%M%S_"), "/data/tmp/ncors_ffsp.log"))
-    )
+    cl_ncors <- makeCluster(ncors_ffsp, outfile = file.path(root_folder, "/data/tmp/ncors_ffsp.log"))
     registerDoParallel(cl_ncors)
 
     set.seed(11081974)

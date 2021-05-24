@@ -22,7 +22,7 @@
 #'
 compileModels <- function(model_data_explo, meta, root_folder, ncors_compile_models, ncors_ffsp) {
   cl_ncors_compile_models <- makeCluster(ncors_compile_models,
-    outfile = file.path(root_folder, paste0(format(Sys.time(), "%Y%m%d_%H%M%S_"), "/data/tmp/ncors_compile_models.log"))
+    outfile = file.path(root_folder, "/data/tmp/ncors_compile_models.log")
   )
   registerDoParallel(cl_ncors_compile_models)
 
@@ -33,6 +33,8 @@ compileModels <- function(model_data_explo, meta, root_folder, ncors_compile_mod
     for (i in seq(length(model_data_explo[[mde]]))) {
       m <- model_data_explo[[mde]][[i]]
       meta$model_run <- names(model_data_explo[[mde]])[i]
+      meta$mde <- mde
+      meta$i <- i
       if (grepl("ALL", meta$model_run)) {
         space_vars <- meta$space_vars
       } else {
