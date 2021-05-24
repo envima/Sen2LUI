@@ -16,7 +16,6 @@
 #' @param verbose Logical. Should information about the progress be printed?
 #' @param ... arguments passed to the classification or regression routine
 #' (such as randomForest).
-#' @param ncors Number of cores to be used.
 #' @return A list of class train. Beside of the usual train content
 #' the object contains the vector "selectedvars" and "selectedvars_perf"
 #' that give the order of the best variables selected as well as their corresponding
@@ -125,7 +124,6 @@ ffsp <- function(predictors,
                  tuneGrid = NULL,
                  seed = sample(1:1000, 1),
                  verbose = TRUE,
-                 ncors = 4,
                  ...) {
   trControl$returnResamp <- "final"
   if (class(response) == "character") {
@@ -178,13 +176,15 @@ ffsp <- function(predictors,
     return(result)
   }
   #### chose initial best model from all combinations of two variables
-  cl_ncors <- makeCluster(ncors)
-  registerDoParallel(cl_ncors)
-
   minGrid <- t(data.frame(combn(names(predictors), minVar)))
 
   ### start parallel processing
-  perf_all_par <- foreach(i = 1:nrow(minGrid), .combine = rbind, .errorhandling = "stop", .packages = c("caret")) %dopar% {
+  if (getDoParRegistered()) {
+    `%d%` <- `%dopar%`
+  } else {
+    `%d%` <- `%do%`
+  }
+  perf_all_par <- foreach(i = 1:nrow(minGrid), .combine = rbind, .errorhandling = "stop", .packages = c("caret")) %d% {
     if (verbose) {
       print(paste0("model using ", paste0(minGrid[i, ], collapse = ","), " will be trained now..."))
     }
@@ -265,7 +265,7 @@ ffsp <- function(predictors,
   bestmodelperf <- ifelse(maximize, max(perf_all_par$actmodelperf), min(perf_all_par$actmodelperf))
   bestmodelperfSE <- ifelse(maximize, max(perf_all_par$actmodelperfSE), min(perf_all_par$actmodelperfSE))
   best_pos <- which(perf_all_par$actmodelperf == bestmodelperf)
-  if(length(best_pos) > 1) {
+  if (length(best_pos) > 1) {
     best_pos <- best_pos[1]
   }
   bestminvars <- unlist(perf_all_par[best_pos, 1:minVar])
@@ -426,8 +426,6 @@ ffsp <- function(predictors,
   bestmodel$minVar <- minVar
   bestmodel$type <- "ffsp"
   bestmodel$perf_all <- bestmodel$perf_all[colSums(!is.na(bestmodel$perf_all)) > 0]
-
-  stopCluster(cl_ncors)
 
   return(bestmodel)
 }

@@ -13,7 +13,7 @@ if (Sys.info()[["nodename"]] == "PC19616") {
 } else {
   root_folder <- "~/plygrnd/Sen2LUI"
   ncors_compile_models <- 2
-  ncors_ffsp <- 30
+  ncors_ffsp <- 35
 }
 source(file.path(root_folder, "src/functions/000_setup.R"))
 

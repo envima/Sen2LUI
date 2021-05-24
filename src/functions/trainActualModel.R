@@ -38,8 +38,12 @@ trainActualModel <- function(m, meta, sv, root_folder, ncors_ffsp) {
     log_info$i <- i
     yaml::write_yaml(log_info, file.path(root_folder, "data/tmp/", paste0(log_info$name, ".yaml")))
 
-    set.seed(11081974)
+    cl_ncors <- makeCluster(ncors_ffsp,
+      outfile = file.path(root_folder, paste0(format(Sys.time(), "%Y%m%d_%H%M%S_"), "/data/tmp/ncors_ffsp.log"))
+    )
+    registerDoParallel(cl_ncors)
 
+    set.seed(11081974)
     ffs_model <- tryCatch(ffsp(
       predictors = m[, meta$predictor_group_final],
       response = m$LUI,
@@ -47,11 +51,12 @@ trainActualModel <- function(m, meta, sv, root_folder, ncors_ffsp) {
       metric = "RMSE",
       seed = 11081974,
       withinSE = FALSE,
-      trControl = trainControl(method = "cv", index = folds$index),
-      ncors = ncors_ffsp
+      trControl = trainControl(method = "cv", index = folds$index)
     ),
-    error = function(e) e
+    error = function(e) e, finally = print(paste("trainActualModel", log_info$name, sep = "_"))
     )
+
+    stopCluster(cl_ncors)
 
     meta$model <- paste0(
       "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
