@@ -7,7 +7,9 @@
 #' @param meta Meta information dataset (initialized with envimaR::createMeta)
 #' @param cor_cutoff Cut off correlation value for removing highly correlated predictors from final set.
 #' @param root_folder Path to folder for saving pngs. The pngs are not required and have just an informative purpose
-#' @param ncors Number of cores to be used.
+#' @param ncors_compile_models Number of cores to be used within this function.
+#' @param ncors_ffsp Number of cores to be used within model training.
+#' @param use_ffs Use forward feature selection (otherwise just train the model with all predictor variables)
 #'
 #' @return Model dataset.
 #'
@@ -20,7 +22,8 @@
 #'
 #' }
 #'
-compileModels <- function(model_data_explo, meta, root_folder, ncors_compile_models, ncors_ffsp) {
+compileModels <- function(model_data_explo, meta, root_folder, ncors_compile_models, ncors_ffsp, use_ffs = TRUE) {
+  print(use_ffs)
   cl_ncors_compile_models <- makeCluster(ncors_compile_models,
     outfile = file.path(root_folder, "/data/tmp/ncors_compile_models.log")
   )
@@ -41,8 +44,11 @@ compileModels <- function(model_data_explo, meta, root_folder, ncors_compile_mod
         space_vars <- meta$space_vars[!grepl("Explo", meta$space_vars)]
       }
       for (sv in space_vars) {
-        tryCatch(trainActualModel(m = m, meta = meta, sv = sv, root_folder = root_folder, ncors_ffsp = ncors_ffsp),
-          error = function(e) e, finally = print(paste("compileModels", mde, i, meta$model_run, sep = "_"))
+        tryCatch(trainActualModel(
+          m = m, meta = meta, sv = sv, root_folder = root_folder, ncors_ffsp = ncors_ffsp,
+          use_ffs = use_ffs
+        ),
+        error = function(e) e, finally = print(paste("compileModels", mde, i, meta$model_run, sep = "_"))
         )
         gc()
       }

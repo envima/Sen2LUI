@@ -1,4 +1,4 @@
-#' Main control script
+#' Compile models using a forward feature selection approach.
 #'
 #' @description Predict land use intensity from satellite and environmental observations.
 #'

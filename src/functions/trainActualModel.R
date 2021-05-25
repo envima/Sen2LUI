@@ -6,7 +6,8 @@
 #' @param meta Meta information dataset (initialized with envimaR::createMeta)
 #' @param sv Actual space variable used for creating the training/test folds.
 #' @param root_folder Path to folder for saving pngs. The pngs are not required and have just an informative purpose
-#' @param ncors_ffsp Cores to be used in ffs.
+#' @param ncors_ffsp Cores to be used in ffs/model training.
+#' @param use_ffs Use forward feature selection (otherwise just train the model with all predictor variables)
 #'
 #' @return Nothing.
 #'
@@ -19,7 +20,8 @@
 #'
 #' }
 #'
-trainActualModel <- function(m, meta, sv, root_folder, ncors_ffsp) {
+trainActualModel <- function(m, meta, sv, root_folder, ncors_ffsp, use_ffs = TRUE) {
+  print(use_ffs)
   meta$space_var <- sv
   if (length(unique(m[, meta$space_var])) > 1) {
     print(meta$space_var)
@@ -39,25 +41,43 @@ trainActualModel <- function(m, meta, sv, root_folder, ncors_ffsp) {
     cl_ncors <- makeCluster(ncors_ffsp, outfile = file.path(root_folder, "/data/tmp/ncors_ffsp.log"))
     registerDoParallel(cl_ncors)
 
-    set.seed(11081974)
-    ffs_model <- tryCatch(ffsp(
-      predictors = m[, meta$predictor_group_final],
-      response = m$LUI,
-      method = meta$method,
-      metric = "RMSE",
-      seed = 11081974,
-      withinSE = FALSE,
-      trControl = trainControl(method = "cv", index = folds$index)
-    ),
-    error = function(e) e, finally = print(paste("trainActualModel", log_info$name, sep = "_"))
-    )
+    if(use_ffs){
+      set.seed(11081974)
+      ffs_model <- tryCatch(ffsp(
+        predictors = m[, meta$predictor_group_final],
+        response = m$LUI,
+        method = meta$method,
+        metric = "RMSE",
+        seed = 11081974,
+        withinSE = FALSE,
+        trControl = trainControl(method = "cv", index = folds$index)
+      ),
+      error = function(e) e, finally = print(paste("trainActualModel", log_info$name, sep = "_"))
+      )
+      meta$model <- paste0(
+        "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
+        paste(meta$model_dataset, collapse = "_"), "_", meta$method, "_", meta$predictor_group, ".rds"
+      )
+    } else {
+      set.seed(11081974)
+      ffs_model <- tryCatch(train(
+        x = m[, meta$predictor_group_final],
+        y = m$LUI,
+        method = meta$method,
+        metric = "RMSE",
+        trControl = trainControl(method = "cv", index = folds$index)
+      ),
+      error = function(e) e, finally = print(paste("trainActualModel", log_info$name, sep = "_"))
+      )
+      meta$model <- paste0(
+        "fixed_predictor_model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
+        paste(meta$model_dataset, collapse = "_"), "_", meta$method, "_", meta$predictor_group, ".rds"
+      )
+    }
+
 
     stopCluster(cl_ncors)
 
-    meta$model <- paste0(
-      "model_", format(Sys.time(), "%Y%m%d_%H%M%S_"),
-      paste(meta$model_dataset, collapse = "_"), "_", meta$method, "_", meta$predictor_group, ".rds"
-    )
 
     if (any(class(ffs_model) == "train")) {
       enviSave(ffs_model, file = file.path(root_folder, "data/results/models/", meta$model), meta)

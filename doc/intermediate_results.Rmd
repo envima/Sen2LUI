@@ -50,7 +50,8 @@ model_info <- lapply(models, function(m) {
     model_run = m$meta$model_run,
     spacefolds = m$meta$spacefolds,
     rmse = m$dat$resample[order(m$dat$resample$Resample), "RMSE"],
-    rsquared = m$dat$resample[order(m$dat$resample$Resample), "Rsquared"]
+    rsquared = m$dat$resample[order(m$dat$resample$Resample), "Rsquared"],
+    predictor_number = length(m$dat$selectedvars)
   )
   
   df_predictors <- data.frame(
@@ -73,7 +74,8 @@ fill_seg_2017 <- lapply(unique(model_performance[model_performance$spacefolds ==
     model_run = unique(model_performance[model_performance$spacefolds == "AEG_2017", "model_run"]),
     spacefolds = "SEG_2017",
     rmse = NA,
-    rsquared = NA
+    rsquared = NA,
+    predictor_number = NA
   )
 })
 fill_seg_2017 <- do.call("rbind", fill_seg_2017)
@@ -129,6 +131,23 @@ predictor_importance <- aggregate(model_predictors$predictor_importance,
 names(predictor_importance) <- c("Predictor_Group", "Predictors", "Importance")
 predictor_importance$Predictor_Group <- factor(predictor_importance$Predictor_Group, levels = c("sat", "sat_met", "met"))
 # predictor_importance[order(predictor_importance$Predictor_Group, predictor_importance$Importance, decreasing = TRUE), ]
+
+predictor_number <- aggregate(predictor_number ~ model_performance$predictor_group, model_performance,
+  FUN = mean,
+  na.action = na.omit
+)
+
+# Compile predictor importance dataset for further model training and testing
+predictors_sat <- predictor_importance[predictor_importance$Predictor_Group == "sat", ]
+predictors_sat_met <- predictor_importance[predictor_importance$Predictor_Group == "sat_met", ]
+
+predictors_sat[order(predictors_sat$Importance, decreasing = TRUE), ][1:13,]
+predictors_sat_met[order(predictors_sat_met$Importance, decreasing = TRUE), ][1:8,]
+
+meta <- createMeta("Sen2LUI")
+meta$info <- "Average predictor importance from first model run."
+enviSave(predictors_sat, file.path(root_folder, "data/results/info/predictors_sat_ffs.rds"), meta = meta)
+enviSave(predictors_sat_met, file.path(root_folder, "data/results/info/predictors_sat_met_ffs.rds"), meta = meta)
 
 
 ggplot(
