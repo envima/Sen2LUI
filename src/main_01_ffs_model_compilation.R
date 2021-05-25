@@ -109,6 +109,6 @@ if (train_model) {
     model_data_explo <- model_datasets[[g]]$dat
     meta <- model_datasets[[g]]$meta
     compileModels(model_data_explo = model_data_explo, meta = meta, root_folder = root_folder,
-                  ncors_compile_models = ncors_compile_models, ncors_ffsp = ncors_ffsp)
+                  ncors_compile_models = ncors_compile_models, ncors_ffsp = ncors_ffsp, use_ffs = TRUE)
   }
 }
