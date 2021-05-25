@@ -23,10 +23,14 @@
 #' }
 #'
 compileModels <- function(model_data_explo, meta, root_folder, ncors_compile_models, ncors_ffsp, use_ffs = TRUE) {
-  print(use_ffs)
-  cl_ncors_compile_models <- makeCluster(ncors_compile_models,
-    outfile = file.path(root_folder, "/data/tmp/ncors_compile_models.log")
-  )
+
+  if(use_ffs){
+    cluster_log_file <- file.path(root_folder, "/data/logs/ncors_compile_models_ffs.log")
+  } else {
+    cluster_log_file <- file.path(root_folder, "/data/logs/ncors_compile_models_non_ffs.log")
+  }
+
+  cl_ncors_compile_models <- makeCluster(ncors_compile_models, outfile = cluster_log_file)
   registerDoParallel(cl_ncors_compile_models)
 
   foreach(

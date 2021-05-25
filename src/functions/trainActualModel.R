@@ -38,7 +38,13 @@ trainActualModel <- function(m, meta, sv, root_folder, ncors_ffsp, use_ffs = TRU
     )
     yaml::write_yaml(log_info, file.path(root_folder, "data/tmp/", paste0(log_info$name, ".yaml")))
 
-    cl_ncors <- makeCluster(ncors_ffsp, outfile = file.path(root_folder, "/data/tmp/ncors_ffsp.log"))
+    if(use_ffs){
+      cluster_log_file <- file.path(root_folder, "/data/logs/ncors_ffsp_ffs.log")
+    } else {
+      cluster_log_file <- file.path(root_folder, "/data/logs/ncors_ffsp_non_ffs.log")
+    }
+
+    cl_ncors <- makeCluster(ncors_ffsp, outfile = cluster_log_file)
     registerDoParallel(cl_ncors)
 
     if(use_ffs){

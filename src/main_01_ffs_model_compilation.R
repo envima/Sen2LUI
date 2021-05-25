@@ -81,6 +81,7 @@ if (compute) {
 ### Extract actual predictor variables from the overall predictor dataset.
 if (compute) {
   model_datasets <- lapply(use_predictor_group, function(g){
+    meta$predictor_group <- g
     cmd <- compileModelDataset(ssets = ssets, msets = msets, meta = meta, act_predictor_group = g, cor_cutoff = 0.95)
     enviSave(cmd$model_data_explo, file.path(root_folder, "data/compiled_data/",
                                              paste0("model_data_explo_", meta$predictor_group, ".rds")), meta = meta)
