@@ -1,9 +1,11 @@
 ---
-title: "Zwischenergebnis"
+title: "Results v2"
 output: html_document
+editor_options: 
+  chunk_output_type: console
 ---
 
-```{r setup, include=FALSE}
+```{r setup, include = FALSE, message = FALSE, warning = FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
 library(envimaR)
@@ -15,42 +17,131 @@ if (Sys.info()[["nodename"]] == "MyComputer") {
 source(file.path(root_folder, "src/functions/000_setup.R"))
 ```
 
-## Ansatz
 
-Ich nutze momentan nur vier Indizes. Zuerst werden Zeitreihen mit der Auflösung von 1 Tag mit gam vorhergesagt, dann 
-Wendepunkte, Mittelwerte etc. aus den GAM-Ergebnissen berechnet. Das sind dann die eigentlichen Prädiktoren.
+## Model results
 
-Hier ein Beispiel so einer GAM-Vorhersage:
+The figures show the model results depending on the overall dataset used for model training and testing (x axis) and 
+the subdataset used for training (headline in plots). All plots together give an impression on how sensitive the model
+is regarding the available dataset for model training and testing (i.e. which years and exploratories).
 
+For example, the first plot on the left shows the results if data
+from (i) 2017 and 2018, (ii) 2017, 2018, 2019, (iii) 2017 and 2019, and (iv) 2018 and 2019 was available for model
+training and testing. The performance is computed based on a left out dataset encompassing all data from 2017.
 
-```{r, echo = FALSE}
-knitr::include_graphics(file.path(root_folder, "data/results/pngs/2018_Alb_NDII_mean_1.png"))
-```
-
-
-## Modellergebnisse
-
-Räumliche Kreuzvalidierung, wobei immer ein "Exploratorienjahr" (z.B. Alb 2018 oder Hai 2019) rausgelassen werden. Auf
-allen anderen wird trainiert. In der Tabelle unten ist jeweils das herausgelassene Exploratorienjahr (=Testsample) 
-angegeben.
-
-Insgesamt drei Modell: cubist, nnet (funktioniet nicht gut), rf.
+Hence, the very left entry on the x axis (ALL_2017_2018) indicates the model performance if the model is trained on 
+data from 2018 and tested on data from 2017. The very right entry on the x axis (ALL_2018_2019) does not show any 
+model performance because if only data from 2018 and 2019 is available, data from 2017 cannot be left out.
 
 ```{r, echo = FALSE}
-mdl_fls <- list.files(file.path(root_folder, "data/results/models"), full.names = TRUE, pattern = glob2rx("*.rds"))
+model_files <- list.files(file.path(root_folder, "data/results/models/"),
+  pattern = glob2rx("*.rds"),
+  full.names = TRUE
+)
 
-mdls <- lapply(mdl_fls, function(f){
-  enviLoad(f)
+models <- lapply(model_files, function(m) {
+  enviLoad(m)
 })
 
-for(i in seq(length(mdls))){
-print(mdls[[i]]$meta$method)
-print(mdls[[i]]$meta$act_model)
-print(cbind(mdls[[i]]$dat$resample[order(mdls[[i]]$dat$resample$Resample),], mdls[[i]]$meta$spacefolds))
-print(varImp(mdls[[i]]$dat))
-print("\n\n")
-}
+model_info <- lapply(models, function(m) {
+  tmp <- varImp(m$dat, scale = FALSE)$importance
+  
+  df_results <- data.frame(
+    predictor_group = m$meta$predictor_group,
+    model_run = m$meta$model_run,
+    spacefolds = m$meta$spacefolds,
+    rmse = m$dat$resample[order(m$dat$resample$Resample), "RMSE"],
+    rsquared = m$dat$resample[order(m$dat$resample$Resample), "Rsquared"]
+  )
+  
+  df_predictors <- data.frame(
+    predictor_group = rep(m$meta$predictor_group, nrow(tmp)),
+    model_run = rep(m$meta$model_run, nrow(tmp)),
+    spacefolds = rep(m$meta$spacefolds, nrow(tmp)),
+    predictors = rownames(tmp),
+    predictor_importance = tmp$Overall
+  )
+
+  return(list(df_results = df_results, df_predictors = df_predictors))
+})
+model_performance <- do.call("rbind", lapply(model_info, "[[", 1))
+model_predictors <- do.call("rbind", lapply(model_info, "[[", 2))
+
+# Add SEG_2017 (only for plot layout reasons)
+fill_seg_2017 <- lapply(unique(model_performance[model_performance$spacefolds == "AEG_2017", "predictor_group"]), function(pg){
+  data.frame(
+    predictor_group = pg,
+    model_run = unique(model_performance[model_performance$spacefolds == "AEG_2017", "model_run"]),
+    spacefolds = "SEG_2017",
+    rmse = NA,
+    rsquared = NA
+  )
+})
+fill_seg_2017 <- do.call("rbind", fill_seg_2017)
+
+model_performance <- rbind(
+  model_performance,
+  fill_seg_2017
+)
 
 
+spacefolds_years <- c("2017", "2018", "2019")
+
+ggplot(
+  data = model_performance[model_performance$spacefolds %in% spacefolds_years, ],
+  mapping = aes(x = model_run, y = rsquared, fill = predictor_group)
+) +
+  geom_col(position = "dodge") +
+  labs(x = "Model dataset used for training", y = expression(r^2)) +
+  theme_bw() +
+  theme(
+    text = element_text(size = 10), axis.title = element_text(size = 10), legend.text = element_text(size = 10),
+    legend.position = "top", axis.text.x = element_text(angle = 90, hjust = 0.95, vjust = 0.2),
+    legend.title = element_blank(), panel.background = element_blank(),
+    panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+  ) +
+  facet_wrap(~spacefolds)
+
+ggplot(
+  data = model_performance[!model_performance$spacefolds %in% spacefolds_years, ],
+  mapping = aes(x = model_run, y = rsquared, fill = predictor_group)
+) +
+  geom_col(position = "dodge") +
+  labs(x = "Model dataset used for training", y = expression(r^2)) +
+  theme_bw() +
+  theme(
+    text = element_text(size = 10), axis.title = element_text(size = 10), legend.text = element_text(size = 10),
+    legend.position = "none", axis.text.x = element_text(angle = 90, hjust = 0.95, vjust = 0.2),
+    legend.title = element_blank(), panel.background = element_blank(),
+    panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+  ) +
+  facet_wrap(~spacefolds)
 ```
 
+## Predictor importance
+
+Mean predictor importance averaged over all model runs if importance is larger 0.
+
+```{r, echo = FALSE}
+predictor_importance <- aggregate(model_predictors$predictor_importance,
+  by = list(model_predictors$predictor_group, model_predictors$predictors),
+  FUN = mean
+)
+names(predictor_importance) <- c("Predictor_Group", "Predictors", "Importance")
+predictor_importance$Predictor_Group <- factor(predictor_importance$Predictor_Group, levels = c("sat", "sat_met", "met"))
+# predictor_importance[order(predictor_importance$Predictor_Group, predictor_importance$Importance, decreasing = TRUE), ]
+
+
+ggplot(
+  data = predictor_importance[predictor_importance$Importance >0, ],
+  mapping = aes(x = Predictor_Group, y = Predictors, fill = Importance)
+) +
+  geom_raster() +
+  labs(x = "Predictor group", y = expression(r^2)) +
+  theme_bw() +
+  theme(
+    text = element_text(size = 8), axis.title = element_text(size = 8), legend.text = element_text(size = 8),
+    legend.position = "right", axis.text.x = element_text(angle = 90, hjust = 0.95, vjust = 0.2),
+    legend.title = element_blank(), panel.background = element_blank(),
+    panel.grid.major = element_blank(), panel.grid.minor = element_blank()
+  ) 
+```
