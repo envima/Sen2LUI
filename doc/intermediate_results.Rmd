@@ -141,8 +141,10 @@ predictor_number <- aggregate(predictor_number ~ model_performance$predictor_gro
 predictors_sat <- predictor_importance[predictor_importance$Predictor_Group == "sat", ]
 predictors_sat_met <- predictor_importance[predictor_importance$Predictor_Group == "sat_met", ]
 
-predictors_sat[order(predictors_sat$Importance, decreasing = TRUE), ][1:13,]
-predictors_sat_met[order(predictors_sat_met$Importance, decreasing = TRUE), ][1:8,]
+predictors_sat_ge_10 <- predictors_sat[order(predictors_sat$Importance, decreasing = TRUE), ]
+predictors_sat_ge_10[predictors_sat_ge_10$Importance >= 10, ]
+predictors_sat_met_ge_10 <- predictors_sat_met[order(predictors_sat_met$Importance, decreasing = TRUE), ]
+predictors_sat_met_ge_10[predictors_sat_met_ge_10$Importance >= 10, ]
 
 meta <- createMeta("Sen2LUI")
 meta$info <- "Average predictor importance from first model run."

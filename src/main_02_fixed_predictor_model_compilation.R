@@ -49,7 +49,7 @@ enviLoad(file.path(root_folder, "data/compiled_data/", paste0("model_data_explo_
 })
 names(model_datasets) <- use_predictor_group
 
-model_datasets$sat$meta$predictor_group_final <- predictors_sat$dat[predictors_sat$dat$Importance >= 50, "Predictors"]
+model_datasets$sat$meta$predictor_group_final <- predictors_sat$dat[predictors_sat$dat$Importance >= 10, "Predictors"]
 
 
 
